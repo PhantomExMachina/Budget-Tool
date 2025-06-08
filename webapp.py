@@ -3,8 +3,8 @@ from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
 
-@app.before_first_request
-def setup_db():
+def setup_db() -> None:
+    """Initialize the database tables if they do not exist."""
     budget_tool.init_db()
 
 
@@ -83,6 +83,7 @@ def history():
 
 
 def main():
+    setup_db()
     app.run(debug=True)
 
 
