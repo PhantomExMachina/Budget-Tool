@@ -132,3 +132,38 @@ def test_delete_monthly_expense(tmp_path):
     assert cur.fetchone()[0] == 0
     conn.close()
 
+
+def test_monthly_expense_creates_transaction(tmp_path):
+    client = setup_app(tmp_path)
+    budget_tool.add_category("Misc")
+    budget_tool.add_monthly_expense("Gym", 10)
+
+    conn = budget_tool.get_connection()
+    cur = conn.execute(
+        "SELECT count(*) FROM transactions WHERE description=?", ("Gym",)
+    )
+    assert cur.fetchone()[0] == 1
+    conn.close()
+
+
+def test_delete_transaction_removes_monthly(tmp_path):
+    client = setup_app(tmp_path)
+    budget_tool.add_category("Misc")
+    budget_tool.add_monthly_expense("Gym", 10)
+
+    conn = budget_tool.get_connection()
+    cur = conn.execute(
+        "SELECT id FROM transactions WHERE description=?", ("Gym",)
+    )
+    tid = cur.fetchone()["id"]
+    conn.close()
+
+    client.post(f"/delete/{tid}")
+
+    conn = budget_tool.get_connection()
+    cur = conn.execute(
+        "SELECT count(*) FROM monthly_expenses WHERE description=?", ("Gym",)
+    )
+    assert cur.fetchone()[0] == 0
+    conn.close()
+
