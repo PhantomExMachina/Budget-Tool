@@ -423,6 +423,18 @@ def set_account(
     conn.close()
     print(f"Account '{name}' set to {fmt(balance)} with payment {fmt(payment)}")
 
+    if acct_type == "Mortgage" and payment:
+        try:
+            add_category("Mortgage Payment")
+        except Exception:
+            pass
+        add_transaction(
+            "Mortgage Payment",
+            payment,
+            "expense",
+            f"Payment for {name}",
+        )
+
 
 def delete_account(name: str) -> None:
     """Remove an account from the database."""
@@ -700,6 +712,7 @@ def add_transaction(
     user: str = "default",
 ):
     """Record an income or expense transaction."""
+    amount = abs(amount)
     conn = get_connection()
     try:
         cat_id = get_category_id(conn, name)
@@ -798,16 +811,24 @@ def show_totals(user: str = "default", months: int = 1):
     if accounts:
         label = "month" if months == 1 else "months"
         print(f"\nAccount forecast after {months} {label}:")
+
+        total_bank = sum(r["balance"] for r in accounts if r["type"] == "Bank")
+        bank_count = sum(1 for r in accounts if r["type"] == "Bank")
+
         for row in accounts:
-            future = account_balance_after_months(
-                row["balance"],
-                row["monthly_payment"],
-                row["apr"],
-                row["escrow"],
-                row["insurance"],
-                row["tax"],
-                months,
-            )
+            if row["type"] == "Bank":
+                share = row["balance"] / total_bank if total_bank else 1 / max(bank_count, 1)
+                future = row["balance"] + net * months * share
+            else:
+                future = account_balance_after_months(
+                    row["balance"],
+                    row["monthly_payment"],
+                    row["apr"],
+                    row["escrow"],
+                    row["insurance"],
+                    row["tax"],
+                    months,
+                )
             change = future - row["balance"]
             sign = "+" if change >= 0 else "-"
             print(
@@ -825,16 +846,25 @@ def forecast_accounts(months: int = 1) -> None:
 
     assets: list[str] = []
     debts: list[str] = []
+
+    total_bank = sum(r["balance"] for r in accounts if r["type"] == "Bank")
+    bank_count = sum(1 for r in accounts if r["type"] == "Bank")
+    _, _, net = calc_totals()
+
     for row in accounts:
-        future = account_balance_after_months(
-            row["balance"],
-            row["monthly_payment"],
-            row["apr"],
-            row["escrow"],
-            row["insurance"],
-            row["tax"],
-            months,
-        )
+        if row["type"] == "Bank":
+            share = row["balance"] / total_bank if total_bank else 1 / max(bank_count, 1)
+            future = row["balance"] + net * months * share
+        else:
+            future = account_balance_after_months(
+                row["balance"],
+                row["monthly_payment"],
+                row["apr"],
+                row["escrow"],
+                row["insurance"],
+                row["tax"],
+                months,
+            )
         change = future - row["balance"]
         sign = "+" if change >= 0 else "-"
         line = (
