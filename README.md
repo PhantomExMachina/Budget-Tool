@@ -62,4 +62,4 @@ pip install -r requirements.txt
 python3 webapp.py
 ```
 
-This launches a local web server at `http://127.0.0.1:5000/` where you can view totals, manage categories, track account balances and add transactions using a basic Bootstrap UI.
+This launches a local web server at `http://127.0.0.1:5000/` where you can view totals, manage categories, track account balances, set spending goals, export transactions to CSV and add income or expenses using a basic Bootstrap UI.

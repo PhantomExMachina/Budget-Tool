@@ -1,5 +1,5 @@
 import budget_tool
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, Response
 
 app = Flask(__name__)
 
@@ -107,12 +107,20 @@ def get_history(limit: int = 50, user: str = "default"):
     return rows
 
 
+def get_goals(user: str = "default"):
+    goals = []
+    for name, amt, spent in budget_tool.get_goal_status(user):
+        goals.append({"category": name, "goal": amt, "spent": spent})
+    return goals
+
+
 @app.route("/")
 def index():
     cats = get_categories()
     income, expense, net = get_totals()
     accounts, warnings = get_accounts()
     assets = get_asset_accounts()
+    goals = get_goals()
     return render_template(
         "index.html",
         categories=cats,
@@ -121,6 +129,7 @@ def index():
         net=net,
         accounts=accounts,
         assets=assets,
+        goals=goals,
         payment_warnings=warnings,
     )
 
@@ -208,6 +217,15 @@ def add_transaction_route():
     return redirect(url_for("index"))
 
 
+@app.route("/set-goal", methods=["POST"])
+def set_goal_route():
+    category = request.form.get("category")
+    amount = request.form.get("amount", type=float)
+    if category and amount is not None:
+        budget_tool.set_goal(category, amount)
+    return redirect(url_for("index"))
+
+
 @app.route("/set-account", methods=["POST"])
 def set_account_route():
     name = request.form.get("name")
@@ -252,6 +270,14 @@ def delete_transaction(tid: int):
     conn.commit()
     conn.close()
     return redirect(url_for("history"))
+
+
+@app.route("/export")
+def export_csv_route():
+    data = budget_tool.export_csv_string()
+    resp = Response(data, mimetype="text/csv")
+    resp.headers["Content-Disposition"] = "attachment; filename=transactions.csv"
+    return resp
 
 
 def main():
