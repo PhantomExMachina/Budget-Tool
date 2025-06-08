@@ -7,6 +7,7 @@ import os
 import sqlite3
 from pathlib import Path
 from datetime import datetime
+import math
 
 try:
     import auth
@@ -72,7 +73,12 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL,
                 balance REAL NOT NULL,
-                monthly_payment REAL DEFAULT 0
+                monthly_payment REAL DEFAULT 0,
+                type TEXT DEFAULT 'Other',
+                apr REAL DEFAULT 0,
+                escrow REAL DEFAULT 0,
+                insurance REAL DEFAULT 0,
+                tax REAL DEFAULT 0
             )"""
     )
     # add item_name column if upgrading from older DB
@@ -80,6 +86,19 @@ def init_db():
     cols = [r[1] for r in cur.fetchall()]
     if "item_name" not in cols:
         cur.execute("ALTER TABLE transactions ADD COLUMN item_name TEXT")
+    # upgrade existing accounts table with new columns if missing
+    cur.execute("PRAGMA table_info(accounts)")
+    acct_cols = [r[1] for r in cur.fetchall()]
+    if "type" not in acct_cols:
+        cur.execute("ALTER TABLE accounts ADD COLUMN type TEXT DEFAULT 'Other'")
+    if "apr" not in acct_cols:
+        cur.execute("ALTER TABLE accounts ADD COLUMN apr REAL DEFAULT 0")
+    if "escrow" not in acct_cols:
+        cur.execute("ALTER TABLE accounts ADD COLUMN escrow REAL DEFAULT 0")
+    if "insurance" not in acct_cols:
+        cur.execute("ALTER TABLE accounts ADD COLUMN insurance REAL DEFAULT 0")
+    if "tax" not in acct_cols:
+        cur.execute("ALTER TABLE accounts ADD COLUMN tax REAL DEFAULT 0")
     # ensure default user exists
     cur.execute("INSERT OR IGNORE INTO users(username) VALUES('default')")
     conn.commit()
@@ -130,17 +149,27 @@ def add_user(username: str):
         conn.close()
 
 
-def set_account(name: str, balance: float, payment: float = 0.0) -> None:
-    """Add or update an account balance and monthly payment."""
+def set_account(
+    name: str,
+    balance: float,
+    payment: float = 0.0,
+    acct_type: str = "Other",
+    apr: float = 0.0,
+    escrow: float = 0.0,
+    insurance: float = 0.0,
+    tax: float = 0.0,
+) -> None:
+    """Add or update an account with details."""
     conn = get_connection()
     conn.execute(
         (
-            "INSERT INTO accounts(name, balance, monthly_payment) "
-            "VALUES(?,?,?) "
+            "INSERT INTO accounts(name, balance, monthly_payment, type, apr, escrow, insurance, tax) "
+            "VALUES(?,?,?,?,?,?,?,?) "
             "ON CONFLICT(name) DO UPDATE SET balance=excluded.balance, "
-            "monthly_payment=excluded.monthly_payment"
+            "monthly_payment=excluded.monthly_payment, type=excluded.type, "
+            "apr=excluded.apr, escrow=excluded.escrow, insurance=excluded.insurance, tax=excluded.tax"
         ),
-        (name, balance, payment),
+        (name, balance, payment, acct_type, apr, escrow, insurance, tax),
     )
     conn.commit()
     conn.close()
@@ -151,26 +180,49 @@ def list_accounts() -> None:
     """Print all account balances and payoff estimates."""
     conn = get_connection()
     cur = conn.execute(
-        "SELECT name, balance, monthly_payment FROM accounts ORDER BY name"
+        "SELECT name, balance, monthly_payment, type, apr, escrow, insurance, tax "
+        "FROM accounts ORDER BY name"
     )
     rows = cur.fetchall()
     conn.close()
     print("Accounts:")
     for row in rows:
-        months = months_to_payoff(row["balance"], row["monthly_payment"])
+        months = months_to_payoff(
+            row["balance"],
+            row["monthly_payment"],
+            row["apr"],
+            row["escrow"],
+            row["insurance"],
+            row["tax"],
+        )
         mtxt = f"{months}" if months is not None else "n/a"
         print(
-            f"- {row['name']}: {row['balance']:.2f} (payment {row['monthly_payment']:.2f}, months {mtxt})"
+            f"- {row['name']} ({row['type']}): {row['balance']:.2f} "
+            f"(payment {row['monthly_payment']:.2f}, months {mtxt})"
         )
     if not rows:
         print("(none)")
 
 
-def months_to_payoff(balance: float, payment: float) -> int | None:
-    """Return estimated months to pay off a balance."""
-    if payment > 0:
-        return int((balance + payment - 1) // payment)
-    return None
+def months_to_payoff(
+    balance: float,
+    payment: float,
+    apr: float = 0.0,
+    escrow: float = 0.0,
+    insurance: float = 0.0,
+    tax: float = 0.0,
+) -> int | None:
+    """Return estimated months to pay off a balance with interest."""
+    principal_payment = payment - escrow - insurance - tax
+    if principal_payment <= 0:
+        return None
+    if apr <= 0:
+        return int((balance + principal_payment - 1) // principal_payment)
+    r = apr / 12 / 100
+    if principal_payment <= balance * r:
+        return None
+    months = -math.log(1 - balance * r / principal_payment) / math.log(1 + r)
+    return int(months + 0.999)
 
 
 def login_user(id_token: str) -> str | None:

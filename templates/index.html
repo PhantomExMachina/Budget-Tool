@@ -32,7 +32,7 @@
   <h3>Add Category</h3>
   <form method="post" action="{{ url_for('add_category_route') }}" class="row g-2">
     <div class="col-auto">
-      <input class="form-control" name="name" placeholder="Category name">
+      <input class="form-control" name="name" placeholder="Category name" required>
     </div>
     <div class="col-auto">
       <button class="btn btn-primary">Add</button>
@@ -44,18 +44,18 @@
     <div class="col-md-2">
       <input name="item_name" class="form-control" placeholder="Item name">
     </div>
-    <div class="col-md-3 mt-md-0 mt-1">
-      <select class="form-select" name="category">
+    <div class="col-md-3">
+      <select class="form-select" name="category" required>
         {% for cat in categories %}
         <option value="{{ cat }}">{{ cat }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="col-md-2">
-      <input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount">
+      <input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount" required>
     </div>
     <div class="col-md-2">
-      <select class="form-select" name="type">
+      <select class="form-select" name="type" required>
         <option value="income">Income</option>
         <option value="expense">Expense</option>
       </select>
@@ -72,6 +72,7 @@
   <table class="table table-bordered">
     <thead>
       <tr>
+        <th>Type</th>
         <th>Name</th>
         <th>Balance</th>
         <th>Monthly Payment</th>
@@ -81,38 +82,85 @@
     <tbody>
     {% for acc in accounts %}
       <tr>
+        <td>{{ acc.type }}</td>
         <td>{{ acc.name }}</td>
         <td>{{ acc.balance }}</td>
         <td>{{ acc.payment }}</td>
         <td>{{ acc.months if acc.months is not none else 'n/a' }}</td>
       </tr>
     {% else %}
-      <tr><td colspan="4">No accounts</td></tr>
+      <tr><td colspan="5">No accounts</td></tr>
     {% endfor %}
     </tbody>
   </table>
 
   <h4>Add/Update Account</h4>
-  <form method="post" action="{{ url_for('set_account_route') }}" class="row gy-2 gx-3">
-    <div class="col-md-3">
-      <input name="name" class="form-control" placeholder="Account name" list="acct-names">
-      <datalist id="acct-names">
+  <form method="post" action="{{ url_for('set_account_route') }}" class="row gy-2 gx-3" id="account-form">
+    <div class="col-md-2">
+      <select name="account_type" id="account-type" class="form-select" required>
         <option>Bank</option>
         <option>Credit Card</option>
         <option>Mortgage</option>
         <option>Vehicle</option>
-      </datalist>
+        <option>Loan</option>
+        <option>Other</option>
+      </select>
     </div>
-    <div class="col-md-3">
-      <input type="number" step="0.01" name="balance" class="form-control" placeholder="Balance">
+    <div class="col-md-2">
+      <input name="name" class="form-control" placeholder="Account name" required>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
+      <input type="number" step="0.01" name="balance" class="form-control" placeholder="Balance" required>
+    </div>
+    <div class="col-md-2" id="payment-field">
       <input type="number" step="0.01" name="payment" class="form-control" placeholder="Monthly Payment">
+    </div>
+    <div class="col-md-2 d-none" id="apr-field">
+      <input type="number" step="0.01" name="apr" class="form-control" placeholder="APR %">
+    </div>
+    <div class="col-md-2 d-none" id="escrow-field">
+      <input type="number" step="0.01" name="escrow" class="form-control" placeholder="Escrow">
+    </div>
+    <div class="col-md-2 d-none" id="insurance-field">
+      <input type="number" step="0.01" name="insurance" class="form-control" placeholder="Home Insurance">
+    </div>
+    <div class="col-md-2 d-none" id="tax-field">
+      <input type="number" step="0.01" name="tax" class="form-control" placeholder="Property Tax">
     </div>
     <div class="col-md-2">
       <button class="btn btn-secondary">Save</button>
     </div>
   </form>
+
+  <script>
+  function updateAccountFields() {
+    const type = document.getElementById('account-type').value;
+    const payment = document.getElementById('payment-field');
+    const apr = document.getElementById('apr-field');
+    const esc = document.getElementById('escrow-field');
+    const ins = document.getElementById('insurance-field');
+    const tax = document.getElementById('tax-field');
+    payment.classList.remove('d-none');
+    apr.classList.add('d-none');
+    esc.classList.add('d-none');
+    ins.classList.add('d-none');
+    tax.classList.add('d-none');
+    if (type === 'Credit Card') {
+      apr.classList.remove('d-none');
+    } else if (type === 'Mortgage') {
+      apr.classList.remove('d-none');
+      esc.classList.remove('d-none');
+      ins.classList.remove('d-none');
+      tax.classList.remove('d-none');
+    } else if (type === 'Bank' || type === 'Other') {
+      payment.classList.add('d-none');
+    } else {
+      apr.classList.remove('d-none');
+    }
+  }
+  document.getElementById('account-type').addEventListener('change', updateAccountFields);
+  window.addEventListener('DOMContentLoaded', updateAccountFields);
+  </script>
 
   <p class="mt-4">
     <a href="{{ url_for('history') }}">View History</a>
