@@ -147,6 +147,10 @@ def update_accounts_route():
         old = request.form.get(f"old_{i}")
         if old is None:
             break
+        # Skip rows marked for deletion to avoid recreating them
+        if old in deletes:
+            i += 1
+            continue
         name = request.form.get(f"name_{i}")
         balance = request.form.get(f"balance_{i}", type=float)
         payment = request.form.get(f"payment_{i}", type=float, default=0.0)
