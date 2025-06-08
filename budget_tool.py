@@ -467,7 +467,7 @@ def list_accounts() -> None:
 def add_monthly_expense(
     desc: str, amount: float, category: str = "Misc", user: str = "default"
 ) -> None:
-    """Insert or replace a monthly expense entry and add a matching transaction."""
+    """Insert or replace a monthly expense and create a transaction if needed."""
     conn = get_connection()
     conn.execute(
         "INSERT OR REPLACE INTO monthly_expenses(description, amount) VALUES(?,?)",
@@ -481,11 +481,14 @@ def add_monthly_expense(
     conn.close()
 
     if not exists:
-        try:
-            add_transaction(category, amount, "expense", desc, user)
-        except ValueError:
+        conn = get_connection()
+        cur = conn.execute("SELECT 1 FROM categories WHERE name=?", (category,))
+        cat_exists = cur.fetchone() is not None
+        conn.close()
+        if not cat_exists:
             add_category(category)
-            add_transaction(category, amount, "expense", desc, user)
+        # ensure the user parameter is passed correctly
+        add_transaction(category, amount, "expense", desc, user=user)
 
 
 def get_monthly_expenses() -> list[tuple[str, float]]:
