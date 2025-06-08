@@ -232,8 +232,9 @@ def auto_scan():
                 budget_tool.add_monthly_expense(desc, amt)
             i += 1
         results = []
+    expenses = budget_tool.get_monthly_expenses()
     return render_template(
-        "auto_scan.html", results=results or [], categories=cats
+        "auto_scan.html", results=results or [], categories=cats, monthly_expenses=expenses
     )
 
 
