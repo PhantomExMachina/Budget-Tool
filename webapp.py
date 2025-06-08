@@ -218,7 +218,20 @@ def auto_scan():
                 continue
             data = io.StringIO(f.read().decode("utf-8"))
             statements.append(budget_tool.parse_statement_csv(data))
-        results = budget_tool.find_recurring_expenses(statements, day_window=1)
+        found = budget_tool.find_recurring_expenses(statements, day_window=1)
+        existing = {d for d, _ in budget_tool.get_monthly_expenses()}
+        results = [(d, a) for d, a in found if d not in existing]
+    elif request.method == "POST":
+        i = 0
+        while True:
+            desc = request.form.get(f"desc_{i}")
+            if desc is None:
+                break
+            amt = request.form.get(f"amt_{i}", type=float)
+            if request.form.get(f"add_{i}") == "on":
+                budget_tool.add_monthly_expense(desc, amt)
+            i += 1
+        results = []
     return render_template(
         "auto_scan.html", results=results or [], categories=cats
     )
