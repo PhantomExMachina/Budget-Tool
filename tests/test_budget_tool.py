@@ -61,6 +61,7 @@ def test_totals_output(tmp_path):
     assert "Total Income: 1,500.00" in totals
     assert "Total Expense: 500.00" in totals
     assert "Net Balance: 1,000.00" in totals
+    assert "Total Assets: 0.00" in totals
 
 
 def test_goal_warning(tmp_path):
@@ -138,6 +139,7 @@ def test_totals_negative_warning(tmp_path):
     out = run_cli(tmp_path, "totals").stdout
     assert "Net Balance: -50.00" in out
     assert "negative in about 4 months" in out
+    assert "Total Assets: 200.00" in out
 
 
 def test_months_to_payoff_interest(tmp_path):
@@ -168,3 +170,16 @@ def test_set_account_with_apr_cli(tmp_path):
             months = int(line.split("months")[1].split(")")[0].strip())
             break
     assert months and months > 100
+
+
+def test_totals_forecast(tmp_path):
+    run_cli(tmp_path, "init")
+    run_cli(tmp_path, "add-category", "Job")
+    run_cli(tmp_path, "add-income", "Job", "1000")
+    import budget_tool
+    budget_tool.DB_FILE = tmp_path / "budget.db"
+    budget_tool.set_account("Card", 1000, payment=100, apr=12, acct_type="Credit Card")
+    out = run_cli(tmp_path, "totals", "--months", "1").stdout
+    assert "Account forecast after 1 month" in out
+    assert "Card" in out
+    assert "910.00" in out

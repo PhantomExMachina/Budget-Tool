@@ -7,6 +7,8 @@ A simple command-line budgeting tool for tracking income and expenses. Data is s
 - Add income and expense entries associated with categories
 - View balances per category
 - View total income, total expenses and net balance
+- View available funds across bank, crypto and stock accounts
+- Forecast account balances for future months
 - Manage multiple users and set per-category spending goals
 - Export transactions to CSV
 - Login via Firebase ID token
@@ -24,7 +26,7 @@ python3 budget_tool.py add-expense <category> <amount> [--user NAME] [-d DESC]
 python3 budget_tool.py set-goal <category> <amount> [--user NAME]
 python3 budget_tool.py export-csv [--output FILE] [--user NAME]
 python3 budget_tool.py balance <category> [--user NAME]
-python3 budget_tool.py totals [--user NAME]            # show overall totals
+python3 budget_tool.py totals [--user NAME] [--months N] # show overall totals and forecast
 python3 budget_tool.py list                            # list all categories
 python3 budget_tool.py delete-category <name>          # remove a category
 python3 budget_tool.py set-account <name> <balance> [--payment AMT]
