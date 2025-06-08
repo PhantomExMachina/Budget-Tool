@@ -225,6 +225,13 @@ def init_db():
                 tax REAL DEFAULT 0
             )"""
     )
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS monthly_expenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                description TEXT UNIQUE NOT NULL,
+                amount REAL NOT NULL
+            )"""
+    )
     # add item_name column if upgrading from older DB
     cur.execute("PRAGMA table_info(transactions)")
     cols = [r[1] for r in cur.fetchall()]
@@ -455,6 +462,39 @@ def list_accounts() -> None:
         )
     if not rows:
         print("(none)")
+
+
+def add_monthly_expense(desc: str, amount: float) -> None:
+    """Insert or replace a monthly expense entry."""
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO monthly_expenses(description, amount) VALUES(?,?)",
+        (desc, amount),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_monthly_expenses() -> list[tuple[str, float]]:
+    """Return all stored monthly expenses."""
+    conn = get_connection()
+    cur = conn.execute(
+        "SELECT description, amount FROM monthly_expenses ORDER BY description"
+    )
+    rows = [(r[0], r[1]) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+
+def monthly_expense_exists(desc: str) -> bool:
+    """Return True if a monthly expense with the given description exists."""
+    conn = get_connection()
+    cur = conn.execute(
+        "SELECT 1 FROM monthly_expenses WHERE description=?", (desc,)
+    )
+    exists = cur.fetchone() is not None
+    conn.close()
+    return exists
 
 
 def months_to_payoff(

@@ -12,6 +12,7 @@ A simple command-line budgeting tool for tracking income and expenses. Data is s
 - Manage multiple users and set per-category spending goals
 - Export transactions to CSV
 - Automatically detect recurring expenses from uploaded statements
+- Store recurring charges as monthly expenses
 - Login via Firebase ID token
 
 ## Usage
@@ -65,7 +66,7 @@ python3 webapp.py
 ```
 
 This launches a local web server at `http://127.0.0.1:5000/` where you can view totals, manage categories, track account balances, set spending goals, export transactions to CSV and add income or expenses using a basic Bootstrap UI.
-The interface also provides an **Auto Scan** page for uploading CSV statements and identifying recurring expenses.
+The interface also provides an **Auto Scan** page for uploading CSV statements and identifying recurring expenses. After scanning, you can choose which charges to store as monthly expenses via check boxes before saving.
 Use the **Auto Scan** link in the navigation bar to access this page.
 
 ### Supported statement formats

@@ -44,16 +44,27 @@
   </form>
   {% if results %}
   <h2>Recurring Expenses</h2>
+  <form method="post">
   <table class="table table-bordered">
     <thead>
-      <tr><th>Description</th><th>Amount</th></tr>
+      <tr><th></th><th>Description</th><th>Amount</th></tr>
     </thead>
     <tbody>
     {% for desc, amt in results %}
-      <tr><td>{{ desc }}</td><td>{{ amt|fmt }}</td></tr>
+      <tr>
+        <td class="text-center">
+          <input type="checkbox" name="add_{{ loop.index0 }}" class="form-check-input shadow-sm" checked>
+          <input type="hidden" name="desc_{{ loop.index0 }}" value="{{ desc }}">
+          <input type="hidden" name="amt_{{ loop.index0 }}" value="{{ amt }}">
+        </td>
+        <td>{{ desc }}</td>
+        <td>{{ amt|fmt }}</td>
+      </tr>
     {% endfor %}
     </tbody>
   </table>
+  <button class="btn btn-primary" type="submit">Save</button>
+  </form>
   {% else %}
     <p>No recurring expenses found.</p>
   {% endif %}
