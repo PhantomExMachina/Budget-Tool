@@ -94,7 +94,10 @@
     </div>
   </form>
 
-  <h3 class="mt-4">Accounts</h3>
+  <h3 class="mt-4 d-flex align-items-center">Accounts
+    <button id="edit-accounts" class="btn btn-sm btn-secondary ms-2">Edit</button>
+  </h3>
+  <form method="post" action="{{ url_for('update_accounts_route') }}" id="accounts-form">
   <table class="table table-bordered">
     <thead>
       <tr>
@@ -109,15 +112,31 @@
     <tbody>
     {% for acc in accounts %}
       <tr>
-        <td>{{ acc.type }}</td>
-        <td>{{ acc.name }}</td>
-        <td>{{ acc.balance }}</td>
-        <td>{{ acc.payment }}</td>
+        <td>
+          <select name="type_{{ loop.index0 }}" class="form-select form-select-sm acct-field" disabled>
+            <option {% if acc.type == 'Bank' %}selected{% endif %}>Bank</option>
+            <option {% if acc.type == 'Crypto Wallet' %}selected{% endif %}>Crypto Wallet</option>
+            <option {% if acc.type == 'Stock Account' %}selected{% endif %}>Stock Account</option>
+            <option {% if acc.type == 'Credit Card' %}selected{% endif %}>Credit Card</option>
+            <option {% if acc.type == 'Mortgage' %}selected{% endif %}>Mortgage</option>
+            <option {% if acc.type == 'Vehicle' %}selected{% endif %}>Vehicle</option>
+            <option {% if acc.type == 'Loan' %}selected{% endif %}>Loan</option>
+            <option {% if acc.type == 'Other' %}selected{% endif %}>Other</option>
+          </select>
+        </td>
+        <td>
+          <input type="text" name="name_{{ loop.index0 }}" value="{{ acc.name }}" class="form-control-plaintext acct-field" readonly>
+        </td>
+        <td>
+          <input type="number" step="0.01" name="balance_{{ loop.index0 }}" value="{{ acc.balance }}" class="form-control-plaintext acct-field" readonly>
+        </td>
+        <td>
+          <input type="number" step="0.01" name="payment_{{ loop.index0 }}" value="{{ acc.payment }}" class="form-control-plaintext acct-field" readonly>
+        </td>
         <td>{{ acc.months if acc.months is not none else 'n/a' }}</td>
         <td>
-          <form method="post" action="{{ url_for('delete_account_route', name=acc.name) }}" class="d-inline">
-            <button class="btn btn-danger btn-sm">Delete</button>
-          </form>
+          <input type="checkbox" name="delete" value="{{ acc.name }}" class="form-check-input acct-check d-none">
+          <input type="hidden" name="old_{{ loop.index0 }}" value="{{ acc.name }}">
         </td>
       </tr>
     {% else %}
@@ -125,6 +144,10 @@
     {% endfor %}
     </tbody>
   </table>
+  <div class="mt-2 d-none" id="acct-actions">
+    <button name="action" value="save" class="btn btn-primary">Save</button>
+  </div>
+  </form>
 
   <h4>Add/Update Account</h4>
   <form method="post" action="{{ url_for('set_account_route') }}" class="row gy-2 gx-3" id="account-form">
@@ -214,6 +237,44 @@
       names.forEach(n => { n.readOnly = false; n.classList.remove('form-control-plaintext'); n.classList.add('form-control'); });
       actions.classList.remove('d-none');
       editBtn.dataset.editing = '1';
+    }
+  });
+
+  const acctBtn = document.getElementById('edit-accounts');
+  const acctChecks = document.querySelectorAll('.acct-check');
+  const acctFields = document.querySelectorAll('.acct-field');
+  const acctActions = document.getElementById('acct-actions');
+  acctBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const editing = acctBtn.dataset.editing === '1';
+    if (editing) {
+      acctBtn.textContent = 'Edit';
+      acctChecks.forEach(cb => cb.classList.add('d-none'));
+      acctFields.forEach(f => {
+        if (f.tagName === 'SELECT') {
+          f.disabled = true;
+        } else {
+          f.readOnly = true;
+          f.classList.add('form-control-plaintext');
+          f.classList.remove('form-control');
+        }
+      });
+      acctActions.classList.add('d-none');
+      acctBtn.dataset.editing = '0';
+    } else {
+      acctBtn.textContent = 'Cancel';
+      acctChecks.forEach(cb => cb.classList.remove('d-none'));
+      acctFields.forEach(f => {
+        if (f.tagName === 'SELECT') {
+          f.disabled = false;
+        } else {
+          f.readOnly = false;
+          f.classList.remove('form-control-plaintext');
+          f.classList.add('form-control');
+        }
+      });
+      acctActions.classList.remove('d-none');
+      acctBtn.dataset.editing = '1';
     }
   });
   </script>
