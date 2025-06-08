@@ -9,6 +9,11 @@ from pathlib import Path
 from datetime import datetime
 import math
 
+
+def fmt(amount: float) -> str:
+    """Return a string with thousand separators and two decimals."""
+    return f"{amount:,.2f}"
+
 try:
     import auth
 except Exception:  # pragma: no cover - optional dependency
@@ -231,7 +236,7 @@ def set_account(
     )
     conn.commit()
     conn.close()
-    print(f"Account '{name}' set to {balance:.2f} with payment {payment:.2f}")
+    print(f"Account '{name}' set to {fmt(balance)} with payment {fmt(payment)}")
 
 
 def delete_account(name: str) -> None:
@@ -267,8 +272,8 @@ def list_accounts() -> None:
         )
         mtxt = f"{months}" if months is not None else "n/a"
         print(
-            f"- {row['name']} ({row['type']}): {row['balance']:.2f} "
-            f"(payment {row['monthly_payment']:.2f}, months {mtxt})"
+            f"- {row['name']} ({row['type']}): {fmt(row['balance'])} "
+            f"(payment {fmt(row['monthly_payment'])}, months {mtxt})"
         )
     if not rows:
         print("(none)")
@@ -348,7 +353,7 @@ def set_goal(category: str, amount: float, user: str = "default"):
             (cat_id, user_id, amount),
         )
         conn.commit()
-        print(f"Goal for {category} set to {amount:.2f} for {user}.")
+        print(f"Goal for {category} set to {fmt(amount)} for {user}.")
     except ValueError as e:
         print(e)
     finally:
@@ -429,7 +434,7 @@ def add_transaction(
         )
         conn.commit()
         print(
-            f"{trans_type.title()} of {amount:.2f} added to {name} for {user}."
+            f"{trans_type.title()} of {fmt(amount)} added to {name} for {user}."
         )
         if trans_type == "expense":
             cur = conn.execute(
@@ -451,7 +456,7 @@ def add_transaction(
                     print(
                         (
                             f"Warning: {user} exceeded goal for {name} ("
-                            f"{spent:.2f}/{goal_amount:.2f})"
+                            f"{fmt(spent)}/{fmt(goal_amount)})"
                         )
                     )
     except ValueError as e:
@@ -477,8 +482,8 @@ def category_balance(name: str, user: str = "default"):
         balance = income - expense
         print(
             (
-                f"Category: {name} ({user})\n  Income: {income:.2f}"
-                f"\n  Expense: {expense:.2f}\n  Balance: {balance:.2f}"
+                f"Category: {name} ({user})\n  Income: {fmt(income)}"
+                f"\n  Expense: {fmt(expense)}\n  Balance: {fmt(balance)}"
             )
         )
     except ValueError as e:
@@ -492,8 +497,8 @@ def show_totals(user: str = "default"):
     income, expense, net = calc_totals(user)
     print(
         (
-            f"Total Income: {income:.2f}\nTotal Expense: {expense:.2f}\n"
-            f"Net Balance: {net:.2f} ({user})"
+            f"Total Income: {fmt(income)}\nTotal Expense: {fmt(expense)}\n"
+            f"Net Balance: {fmt(net)} ({user})"
         )
     )
     warn = months_until_bank_negative(user)
@@ -549,7 +554,7 @@ def list_transactions(category: str | None, limit: int, user: str = "default"):
             desc = row[3] or ""
             item = row[4] or ""
             print(
-                f"{row[5]} | {row[0]} | {row[2]} | {row[1]:.2f} | {item} | {desc}"
+                f"{row[5]} | {row[0]} | {row[2]} | {fmt(row[1])} | {item} | {desc}"
             )
         if not rows:
             print("(no transactions)")
@@ -726,7 +731,7 @@ def main() -> None:
         init_db()
         bal = bank_balance_after_months(args.months)
         print(
-            f"Estimated bank balance after {args.months} months: {bal:.2f}"
+            f"Estimated bank balance after {args.months} months: {fmt(bal)}"
         )
     elif args.command == "delete-account":
         init_db()

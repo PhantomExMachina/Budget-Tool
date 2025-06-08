@@ -44,7 +44,7 @@
       <tr>
         <td>{{ acc.type }}</td>
         <td>{{ acc.name }}</td>
-        <td>{{ acc.balance }}</td>
+        <td>{{ acc.balance|fmt }}</td>
       </tr>
     {% else %}
       <tr><td colspan="3">No accounts</td></tr>
@@ -53,9 +53,9 @@
   </table>
   <h2>Totals</h2>
   <ul>
-    <li>Income: {{ income|round(2) }}</li>
-    <li>Expense: {{ expense|round(2) }}</li>
-    <li>Net Balance: {{ net|round(2) }}</li>
+    <li>Income: {{ income|fmt }}</li>
+    <li>Expense: {{ expense|fmt }}</li>
+    <li>Net Balance: {{ net|fmt }}</li>
   </ul>
 
   <h2 class="d-flex align-items-center">Categories <button id="edit-cats" class="btn btn-sm btn-secondary ms-2">Edit</button></h2>
