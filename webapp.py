@@ -60,6 +60,18 @@ def get_accounts():
     return data
 
 
+def get_asset_accounts():
+    conn = budget_tool.get_connection()
+    cur = conn.execute(
+        "SELECT name, balance, type FROM accounts "
+        "WHERE type IN ('Bank','Crypto Wallet','Stock Account') "
+        "ORDER BY name"
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [{"name": r["name"], "balance": r["balance"], "type": r["type"]} for r in rows]
+
+
 def get_history(limit: int = 50, user: str = "default"):
     conn = budget_tool.get_connection()
     user_id = budget_tool.get_user_id(conn, user)
@@ -84,6 +96,7 @@ def index():
     cats = get_categories()
     income, expense, net = get_totals()
     accounts = get_accounts()
+    assets = get_asset_accounts()
     return render_template(
         "index.html",
         categories=cats,
@@ -91,6 +104,7 @@ def index():
         expense=expense,
         net=net,
         accounts=accounts,
+        assets=assets,
     )
 
 
@@ -105,6 +119,21 @@ def add_category_route():
 @app.route("/delete-category/<name>", methods=["POST"])
 def delete_category_route(name: str):
     budget_tool.delete_category(name)
+    return redirect(url_for("index"))
+
+
+@app.route("/update-categories", methods=["POST"])
+def update_categories_route():
+    deletes = request.form.getlist("delete")
+    for d in deletes:
+        budget_tool.delete_category(d)
+    for key in request.form:
+        if key.startswith("old_"):
+            idx = key[4:]
+            old = request.form[key]
+            new = request.form.get(f"name_{idx}")
+            if new and old and new != old:
+                budget_tool.rename_category(old, new)
     return redirect(url_for("index"))
 
 

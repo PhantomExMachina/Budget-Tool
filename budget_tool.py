@@ -136,6 +136,20 @@ def delete_category(name: str) -> None:
         conn.close()
 
 
+def rename_category(old_name: str, new_name: str) -> None:
+    """Rename a category while preserving transactions."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "UPDATE categories SET name=? WHERE name=?",
+            (new_name, old_name),
+        )
+        conn.commit()
+        print(f"Category '{old_name}' renamed to '{new_name}'.")
+    finally:
+        conn.close()
+
+
 def add_user(username: str):
     """Create a new user account."""
     conn = get_connection()
@@ -213,6 +227,7 @@ def months_to_payoff(
     tax: float = 0.0,
 ) -> int | None:
     """Return estimated months to pay off a balance with interest."""
+    balance = abs(balance)
     principal_payment = payment - escrow - insurance - tax
     if principal_payment <= 0:
         return None

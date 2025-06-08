@@ -8,6 +8,27 @@
 <body>
 <div class="container mt-4">
   <h1>Budget Tool</h1>
+  <h2>Accounts With Funds</h2>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Balance</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for acc in assets %}
+      <tr>
+        <td>{{ acc.type }}</td>
+        <td>{{ acc.name }}</td>
+        <td>{{ acc.balance }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="3">No accounts</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
   <h2>Totals</h2>
   <ul>
     <li>Income: {{ income|round(2) }}</li>
@@ -15,19 +36,24 @@
     <li>Net Balance: {{ net|round(2) }}</li>
   </ul>
 
-  <h2>Categories</h2>
-  <ul class="list-unstyled">
-  {% for cat in categories %}
-    <li class="mb-1">
-      {{ cat }}
-      <form method="post" action="{{ url_for('delete_category_route', name=cat) }}" style="display:inline">
-        <button class="btn btn-sm btn-danger">Delete</button>
-      </form>
-    </li>
-  {% else %}
-    <li>No categories</li>
-  {% endfor %}
-  </ul>
+  <h2 class="d-flex align-items-center">Categories <button id="edit-cats" class="btn btn-sm btn-secondary ms-2">Edit</button></h2>
+  <form method="post" action="{{ url_for('update_categories_route') }}" id="cats-form">
+    <ul class="list-unstyled" id="cats-list">
+    {% for cat in categories %}
+      <li class="mb-2 d-flex align-items-center">
+        <input type="checkbox" name="delete" value="{{ cat }}" class="form-check-input shadow-sm me-2 edit-check d-none">
+        <input type="text" name="name_{{ loop.index0 }}" value="{{ cat }}" class="form-control-plaintext flex-grow-1 edit-name" readonly>
+        <input type="hidden" name="old_{{ loop.index0 }}" value="{{ cat }}">
+      </li>
+    {% else %}
+      <li>No categories</li>
+    {% endfor %}
+    </ul>
+    <div class="mt-2 d-none" id="cat-actions">
+      <button name="action" value="delete" class="btn btn-danger me-2">Delete</button>
+      <button name="action" value="save" class="btn btn-primary">Save</button>
+    </div>
+  </form>
 
   <h3>Add Category</h3>
   <form method="post" action="{{ url_for('add_category_route') }}" class="row g-2">
@@ -99,6 +125,8 @@
     <div class="col-md-2">
       <select name="account_type" id="account-type" class="form-select" required>
         <option>Bank</option>
+        <option>Crypto Wallet</option>
+        <option>Stock Account</option>
         <option>Credit Card</option>
         <option>Mortgage</option>
         <option>Vehicle</option>
@@ -152,7 +180,7 @@
       esc.classList.remove('d-none');
       ins.classList.remove('d-none');
       tax.classList.remove('d-none');
-    } else if (type === 'Bank' || type === 'Other') {
+    } else if (type === 'Bank' || type === 'Other' || type === 'Crypto Wallet' || type === 'Stock Account') {
       payment.classList.add('d-none');
     } else {
       apr.classList.remove('d-none');
@@ -160,6 +188,28 @@
   }
   document.getElementById('account-type').addEventListener('change', updateAccountFields);
   window.addEventListener('DOMContentLoaded', updateAccountFields);
+
+  const editBtn = document.getElementById('edit-cats');
+  const checks = document.querySelectorAll('.edit-check');
+  const names = document.querySelectorAll('.edit-name');
+  const actions = document.getElementById('cat-actions');
+  editBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const editing = editBtn.dataset.editing === '1';
+    if (editing) {
+      editBtn.textContent = 'Edit';
+      checks.forEach(cb => cb.classList.add('d-none'));
+      names.forEach(n => { n.readOnly = true; n.classList.add('form-control-plaintext'); n.classList.remove('form-control'); });
+      actions.classList.add('d-none');
+      editBtn.dataset.editing = '0';
+    } else {
+      editBtn.textContent = 'Cancel';
+      checks.forEach(cb => cb.classList.remove('d-none'));
+      names.forEach(n => { n.readOnly = false; n.classList.remove('form-control-plaintext'); n.classList.add('form-control'); });
+      actions.classList.remove('d-none');
+      editBtn.dataset.editing = '1';
+    }
+  });
   </script>
 
   <p class="mt-4">
