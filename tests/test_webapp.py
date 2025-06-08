@@ -95,3 +95,10 @@ def test_auto_scan_route(tmp_path):
     assert resp.status_code == 200
     assert b"Gym" in resp.data
 
+
+def test_nav_contains_auto_scan(tmp_path):
+    client = setup_app(tmp_path)
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert b"/auto-scan" in resp.data
+
