@@ -95,6 +95,26 @@ def get_history(limit: int = 50, user: str = "default"):
     return rows
 
 
+def get_expenses(limit: int = 50, user: str = "default"):
+    """Return recent expense transactions."""
+    conn = budget_tool.get_connection()
+    user_id = budget_tool.get_user_id(conn, user)
+    cur = conn.execute(
+        """
+        SELECT t.id, c.name, t.amount, t.type, t.description, t.item_name, t.created_at
+        FROM transactions t
+        JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = ? AND t.type='expense'
+        ORDER BY t.created_at DESC
+        LIMIT ?
+        """,
+        (user_id, limit),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
 def get_goals(user: str = "default"):
     goals = []
     for name, amt, spent in budget_tool.get_goal_status(user):
@@ -132,7 +152,22 @@ def get_account_forecast(months: int = 1):
 
 
 @app.route("/")
-def index():
+def overview():
+    income, expense, net = get_totals()
+    assets = get_asset_accounts()
+    expenses = get_expenses()
+    return render_template(
+        "overview.html",
+        assets=assets,
+        income=income,
+        expense=expense,
+        net=net,
+        expenses=expenses,
+    )
+
+
+@app.route("/manage")
+def manage():
     cats = get_categories()
     income, expense, net = get_totals()
     accounts, warnings = get_accounts()
@@ -141,7 +176,7 @@ def index():
     bank_warning = budget_tool.months_until_bank_negative()
     goals = get_goals()
     return render_template(
-        "index.html",
+        "manage.html",
         categories=cats,
         income=income,
         expense=expense,
@@ -174,13 +209,13 @@ def add_category_route():
     name = request.form.get("name")
     if name:
         budget_tool.add_category(name)
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 
 @app.route("/delete-category/<name>", methods=["POST"])
 def delete_category_route(name: str):
     budget_tool.delete_category(name)
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 
 @app.route("/update-categories", methods=["POST"])
@@ -195,7 +230,7 @@ def update_categories_route():
             new = request.form.get(f"name_{idx}")
             if new and old and new != old:
                 budget_tool.rename_category(old, new)
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 
 @app.route("/update-accounts", methods=["POST"])
@@ -238,7 +273,7 @@ def update_accounts_route():
             if name != old:
                 budget_tool.delete_account(old)
         i += 1
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 
 @app.route("/add-transaction", methods=["POST"])
@@ -249,7 +284,7 @@ def add_transaction_route():
     desc = request.form.get("description") or None
     item = request.form.get("item_name") or None
     budget_tool.add_transaction(category, amount, ttype, desc, item)
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 
 @app.route("/set-goal", methods=["POST"])
@@ -258,7 +293,7 @@ def set_goal_route():
     amount = request.form.get("amount", type=float)
     if category and amount is not None:
         budget_tool.set_goal(category, amount)
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 
 @app.route("/set-account", methods=["POST"])
@@ -283,13 +318,13 @@ def set_account_route():
             budget_tool.add_transaction(
                 "Credit Card Payment", payment, "expense", f"Payment for {name}"
             )
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 
 @app.route("/delete-account/<name>", methods=["POST"])
 def delete_account_route(name: str):
     budget_tool.delete_account(name)
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 
 @app.route("/history")
