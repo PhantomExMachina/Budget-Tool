@@ -25,9 +25,12 @@ python3 budget_tool.py balance <category> [--user NAME]
 python3 budget_tool.py totals [--user NAME]            # show overall totals
 python3 budget_tool.py list                            # list all categories
 python3 budget_tool.py history [CATEGORY] [--user NAME] [--limit N]
+python3 budget_tool.py --db mydata.db totals          # use a custom database
 ```
 
-The database file `budget.db` is created in the same directory as the script.
+By default the database file `budget.db` is created in the same directory as the
+script. Set the `--db` option or the `BUDGET_DB` environment variable to use a
+different location.
 
 ## Running tests
 

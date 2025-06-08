@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "budget-tool"
+version = "0.1.0"
+description = "CLI-based budgeting tool"
+authors = [{name="Budget Maintainer", email="maintainer@example.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+
+[project.scripts]
+budget-tool = "budget_tool:main"
