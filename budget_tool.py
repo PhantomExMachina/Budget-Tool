@@ -46,7 +46,15 @@ def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
         if hasattr(f, "seek"):
             f.seek(0)
     try:
-        reader = csv.reader(f)
+        sample = f.read(1024)
+        if hasattr(f, "seek"):
+            f.seek(0)
+        try:
+            dialect = csv.Sniffer().sniff(sample)
+            delimiter = dialect.delimiter
+        except csv.Error:
+            delimiter = ","
+        reader = csv.reader(f, delimiter=delimiter)
         rows = list(reader)
     finally:
         if close:
@@ -83,13 +91,20 @@ def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
             amt_str = mapping.get("amount", row[2])
         else:
             date_str, desc, amt_str = row[0], row[1], row[2]
-        try:
-            dt = datetime.fromisoformat(date_str)
-        except ValueError:
+        dt = None
+        for fmt in [
+            lambda s: datetime.fromisoformat(s),
+            lambda s: datetime.strptime(s, "%Y-%m-%d"),
+            lambda s: datetime.strptime(s, "%Y%m%d"),
+            lambda s: datetime.strptime(s, "%m/%d/%Y"),
+        ]:
             try:
-                dt = datetime.strptime(date_str, "%Y-%m-%d")
+                dt = fmt(date_str)
+                break
             except ValueError:
-                continue
+                pass
+        if dt is None:
+            continue
         amt = float(amt_str.replace("$", "").replace(",", ""))
         records.append(TransactionRecord(dt, desc.strip(), amt))
     return records

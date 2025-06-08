@@ -224,6 +224,32 @@ def test_parse_statement_csv_posting_date(tmp_path):
     assert records[0].date == datetime(2023, 1, 1)
 
 
+def test_parse_statement_csv_tab_delimited(tmp_path):
+    csv_text = "date\tdescription\tamount\n2023-01-01\tGym\t10"
+    f = tmp_path / "tab.tsv"
+    f.write_text(csv_text)
+    from budget_tool import parse_statement_csv
+
+    records = parse_statement_csv(f)
+    assert len(records) == 1
+    assert records[0].description == "Gym"
+    assert records[0].amount == 10
+
+
+def test_parse_statement_csv_date_formats(tmp_path):
+    csv_text = (
+        "date,description,amount\n20230102,Gym,20\n01/03/2023,Store,5"
+    )
+    f = tmp_path / "dates.csv"
+    f.write_text(csv_text)
+    from budget_tool import parse_statement_csv
+
+    records = parse_statement_csv(f)
+    assert len(records) == 2
+    assert records[0].date == datetime(2023, 1, 2)
+    assert records[1].date == datetime(2023, 1, 3)
+
+
 def test_find_recurring_expenses():
     from budget_tool import TransactionRecord, find_recurring_expenses
     rec1 = [
