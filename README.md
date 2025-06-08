@@ -66,3 +66,4 @@ python3 webapp.py
 
 This launches a local web server at `http://127.0.0.1:5000/` where you can view totals, manage categories, track account balances, set spending goals, export transactions to CSV and add income or expenses using a basic Bootstrap UI.
 The interface also provides an **Auto Scan** page for uploading CSV statements and identifying recurring expenses.
+Use the **Auto Scan** link in the navigation bar to access this page.
