@@ -274,3 +274,32 @@ def test_find_recurring_expenses_day_window():
 
     res = find_recurring_expenses([jan, feb], day_window=1)
     assert res and res[0][0] == "Service"
+
+
+def test_find_recurring_expenses_positive_amount():
+    """Negative amounts should be returned as positive values."""
+    from budget_tool import TransactionRecord, find_recurring_expenses
+
+    jan = [TransactionRecord(datetime(2023, 1, 1), "Gym", -10)]
+    feb = [TransactionRecord(datetime(2023, 2, 1), "Gym", -10)]
+
+    res = find_recurring_expenses([jan, feb])
+    assert res and res[0][1] == 10
+
+
+def test_add_monthly_expense_abs(tmp_path):
+    import budget_tool
+
+    budget_tool.DB_FILE = tmp_path / "budget.db"
+    budget_tool.init_db()
+    budget_tool.add_category("Misc")
+    budget_tool.add_monthly_expense("Gym", -20)
+
+    conn = budget_tool.get_connection()
+    amt = conn.execute(
+        "SELECT amount FROM monthly_expenses WHERE description=?",
+        ("Gym",),
+    ).fetchone()[0]
+    conn.close()
+    assert amt == 20
+
