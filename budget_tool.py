@@ -49,6 +49,7 @@ def init_db():
                 amount REAL NOT NULL,
                 type TEXT CHECK(type IN ('income','expense')) NOT NULL,
                 description TEXT,
+                item_name TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(category_id) REFERENCES categories(id),
                 FOREIGN KEY(user_id) REFERENCES users(id)
@@ -65,6 +66,11 @@ def init_db():
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )"""
     )
+    # add item_name column if upgrading from older DB
+    cur.execute("PRAGMA table_info(transactions)")
+    cols = [r[1] for r in cur.fetchall()]
+    if "item_name" not in cols:
+        cur.execute("ALTER TABLE transactions ADD COLUMN item_name TEXT")
     # ensure default user exists
     cur.execute("INSERT OR IGNORE INTO users(username) VALUES('default')")
     conn.commit()
@@ -155,7 +161,7 @@ def export_csv(output_file: str, user: str = "default"):
     user_id = get_user_id(conn, user)
     cur = conn.execute(
         """
-        SELECT c.name, t.amount, t.type, t.description, t.created_at
+        SELECT c.name, t.amount, t.type, t.description, t.item_name, t.created_at
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
         WHERE t.user_id = ?
@@ -167,7 +173,7 @@ def export_csv(output_file: str, user: str = "default"):
     with open(output_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(
-            ["category", "amount", "type", "description", "created_at"]
+            ["category", "amount", "type", "description", "item_name", "created_at"]
         )
         for r in rows:
             writer.writerow(r)
@@ -197,6 +203,7 @@ def add_transaction(
     amount: float,
     trans_type: str,
     description: str | None = None,
+    item_name: str | None = None,
     user: str = "default",
 ):
     """Record an income or expense transaction."""
@@ -207,8 +214,8 @@ def add_transaction(
         conn.execute(
             (
                 "INSERT INTO transactions("
-                "category_id, user_id, amount, type, description, created_at) "
-                "VALUES(?,?,?,?,?,?)"
+                "category_id, user_id, amount, type, description, item_name, created_at) "
+                "VALUES(?,?,?,?,?,?,?)"
             ),
             (
                 cat_id,
@@ -216,6 +223,7 @@ def add_transaction(
                 amount,
                 trans_type,
                 description,
+                item_name,
                 datetime.now().isoformat(),
             ),
         )
@@ -325,7 +333,7 @@ def list_transactions(category: str | None, limit: int, user: str = "default"):
             cat_id = get_category_id(conn, category)
             cur = conn.execute(
                 """
-                SELECT c.name, t.amount, t.type, t.description, t.created_at
+                SELECT c.name, t.amount, t.type, t.description, t.item_name, t.created_at
                 FROM transactions t
                 JOIN categories c ON t.category_id = c.id
                 WHERE t.category_id = ? AND t.user_id = ?
@@ -337,7 +345,7 @@ def list_transactions(category: str | None, limit: int, user: str = "default"):
         else:
             cur = conn.execute(
                 """
-                SELECT c.name, t.amount, t.type, t.description, t.created_at
+                SELECT c.name, t.amount, t.type, t.description, t.item_name, t.created_at
                 FROM transactions t
                 JOIN categories c ON t.category_id = c.id
                 WHERE t.user_id = ?
@@ -349,8 +357,9 @@ def list_transactions(category: str | None, limit: int, user: str = "default"):
         rows = cur.fetchall()
         for row in rows:
             desc = row[3] or ""
+            item = row[4] or ""
             print(
-                f"{row[4]} | {row[0]} | {row[2]} | {row[1]:.2f} | {desc}"
+                f"{row[5]} | {row[0]} | {row[2]} | {row[1]:.2f} | {item} | {desc}"
             )
         if not rows:
             print("(no transactions)")
@@ -385,6 +394,7 @@ def parse_args() -> argparse.Namespace:
     parser_income.add_argument("category")
     parser_income.add_argument("amount", type=float)
     parser_income.add_argument("-d", "--description", default=None)
+    parser_income.add_argument("-i", "--item", default=None)
     parser_income.add_argument("--user", default="default")
 
     parser_expense = subparsers.add_parser(
@@ -393,6 +403,7 @@ def parse_args() -> argparse.Namespace:
     parser_expense.add_argument("category")
     parser_expense.add_argument("amount", type=float)
     parser_expense.add_argument("-d", "--description", default=None)
+    parser_expense.add_argument("-i", "--item", default=None)
     parser_expense.add_argument("--user", default="default")
 
     parser_balance = subparsers.add_parser(
@@ -447,12 +458,12 @@ def main() -> None:
     elif args.command == "add-income":
         init_db()
         add_transaction(
-            args.category, args.amount, "income", args.description, args.user
+            args.category, args.amount, "income", args.description, args.item, args.user
         )
     elif args.command == "add-expense":
         init_db()
         add_transaction(
-            args.category, args.amount, "expense", args.description, args.user
+            args.category, args.amount, "expense", args.description, args.item, args.user
         )
     elif args.command == "set-goal":
         init_db()

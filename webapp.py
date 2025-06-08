@@ -35,7 +35,7 @@ def get_history(limit: int = 50, user: str = "default"):
     user_id = budget_tool.get_user_id(conn, user)
     cur = conn.execute(
         """
-        SELECT c.name, t.amount, t.type, t.description, t.created_at
+        SELECT t.id, c.name, t.amount, t.type, t.description, t.item_name, t.created_at
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
         WHERE t.user_id = ?
@@ -72,7 +72,8 @@ def add_transaction_route():
     amount = request.form.get("amount", type=float)
     ttype = request.form["type"]
     desc = request.form.get("description") or None
-    budget_tool.add_transaction(category, amount, ttype, desc)
+    item = request.form.get("item_name") or None
+    budget_tool.add_transaction(category, amount, ttype, desc, item)
     return redirect(url_for("index"))
 
 
@@ -80,6 +81,15 @@ def add_transaction_route():
 def history():
     rows = get_history()
     return render_template("history.html", rows=rows)
+
+
+@app.route("/delete/<int:tid>", methods=["POST"])
+def delete_transaction(tid: int):
+    conn = budget_tool.get_connection()
+    conn.execute("DELETE FROM transactions WHERE id=?", (tid,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("history"))
 
 
 def main():
