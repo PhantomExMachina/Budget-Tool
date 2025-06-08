@@ -65,7 +65,20 @@ def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
             continue
         if has_header:
             mapping = {header[i]: row[i] for i in range(len(header))}
-            date_str = mapping.get("date", row[0])
+            date_key = None
+            for key in [
+                "date",
+                "posting date",
+                "effective date",
+                "transaction date",
+            ]:
+                if key in header:
+                    date_key = key
+                    break
+            if date_key:
+                date_str = mapping.get(date_key, row[0])
+            else:
+                date_str = row[0]
             desc = mapping.get("description", row[1])
             amt_str = mapping.get("amount", row[2])
         else:

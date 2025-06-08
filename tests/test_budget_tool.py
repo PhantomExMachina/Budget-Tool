@@ -211,6 +211,19 @@ def test_parse_statement_csv(tmp_path):
     assert records[0].amount == 10
 
 
+def test_parse_statement_csv_posting_date(tmp_path):
+    csv_text = "Posting Date,Description,Amount\n2023-01-01,Coffee,5"
+    f = tmp_path / "s2.csv"
+    f.write_text(csv_text)
+    from budget_tool import parse_statement_csv
+
+    records = parse_statement_csv(f)
+    assert len(records) == 1
+    assert records[0].description == "Coffee"
+    assert records[0].amount == 5
+    assert records[0].date == datetime(2023, 1, 1)
+
+
 def test_find_recurring_expenses():
     from budget_tool import TransactionRecord, find_recurring_expenses
     rec1 = [
