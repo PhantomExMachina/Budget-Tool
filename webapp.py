@@ -167,7 +167,24 @@ def update_accounts_route():
         payment = request.form.get(f"payment_{i}", type=float, default=0.0)
         acct_type = request.form.get(f"type_{i}")
         if name and balance is not None:
-            budget_tool.set_account(name, balance, payment, acct_type)
+            # Preserve APR and other fields not included in the edit table
+            conn = budget_tool.get_connection()
+            cur = conn.execute(
+                "SELECT apr, escrow, insurance, tax FROM accounts WHERE name=?",
+                (old,),
+            )
+            row = cur.fetchone()
+            conn.close()
+            if row is None:
+                apr = escrow = insurance = tax = 0.0
+            else:
+                apr = row["apr"]
+                escrow = row["escrow"]
+                insurance = row["insurance"]
+                tax = row["tax"]
+            budget_tool.set_account(
+                name, balance, payment, acct_type, apr, escrow, insurance, tax
+            )
             if name != old:
                 budget_tool.delete_account(old)
         i += 1
