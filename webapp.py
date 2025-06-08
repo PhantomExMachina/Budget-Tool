@@ -238,6 +238,13 @@ def auto_scan():
     )
 
 
+@app.route("/delete-monthly/<path:desc>", methods=["POST"])
+def delete_monthly_expense_route(desc: str):
+    """Remove a saved monthly expense and related transactions."""
+    budget_tool.delete_monthly_expense(desc)
+    return redirect(url_for("auto_scan"))
+
+
 @app.route("/add-category", methods=["POST"])
 def add_category_route():
     name = request.form.get("name")
