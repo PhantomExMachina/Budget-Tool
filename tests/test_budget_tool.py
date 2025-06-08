@@ -91,6 +91,14 @@ def test_history_output(tmp_path):
     assert "snack" in hist
 
 
+def test_item_name_recorded(tmp_path):
+    run_cli(tmp_path, "init")
+    run_cli(tmp_path, "add-category", "Utilities")
+    run_cli(tmp_path, "add-expense", "Utilities", "30", "--item", "Water")
+    hist = run_cli(tmp_path, "history").stdout
+    assert "Water" in hist
+
+
 def test_custom_db_path(tmp_path):
     custom = tmp_path / "custom.db"
     run_cli(tmp_path, "init", db_path=custom)

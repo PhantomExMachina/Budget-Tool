@@ -15,7 +15,9 @@
         <th>Category</th>
         <th>Type</th>
         <th>Amount</th>
+        <th>Item</th>
         <th>Description</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -25,10 +27,16 @@
         <td>{{ row['name'] }}</td>
         <td>{{ row['type'] }}</td>
         <td>{{ row['amount'] }}</td>
+        <td>{{ row['item_name'] or '' }}</td>
         <td>{{ row['description'] or '' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('delete_transaction', tid=row['id']) }}" style="display:inline">
+            <button class="btn btn-sm btn-danger">Delete</button>
+          </form>
+        </td>
       </tr>
     {% else %}
-      <tr><td colspan="5">No transactions</td></tr>
+      <tr><td colspan="7">No transactions</td></tr>
     {% endfor %}
     </tbody>
   </table>
