@@ -377,9 +377,14 @@ def history():
 @app.route("/delete/<int:tid>", methods=["POST"])
 def delete_transaction(tid: int):
     conn = budget_tool.get_connection()
+    cur = conn.execute("SELECT description FROM transactions WHERE id=?", (tid,))
+    row = cur.fetchone()
+    desc = row["description"] if row else None
     conn.execute("DELETE FROM transactions WHERE id=?", (tid,))
     conn.commit()
     conn.close()
+    if desc:
+        budget_tool.delete_monthly_expense(desc)
     return redirect(url_for("history"))
 
 
