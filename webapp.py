@@ -3,6 +3,12 @@ from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
 
+
+@app.template_filter("fmt")
+def fmt_filter(value: float) -> str:
+    """Jinja filter to format numbers with commas and two decimals."""
+    return budget_tool.fmt(value)
+
 def setup_db() -> None:
     """Initialize the database tables if they do not exist."""
     budget_tool.init_db()

@@ -49,7 +49,7 @@
         <td>{{ row['created_at'] }}</td>
         <td>{{ row['name'] }}</td>
         <td>{{ row['type'] }}</td>
-        <td>{{ row['amount'] }}</td>
+        <td>{{ row['amount']|fmt }}</td>
         <td>{{ row['description'] or '' }}</td>
         <td>
           <form method="post" action="{{ url_for('delete_transaction', tid=row['id']) }}" style="display:inline">

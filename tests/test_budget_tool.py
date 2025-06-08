@@ -46,7 +46,7 @@ def test_income_expense_balance(tmp_path):
     run_cli(tmp_path, "add-income", "Salary", "1000")
     run_cli(tmp_path, "add-expense", "Salary", "200")
     bal = run_cli(tmp_path, "balance", "Salary").stdout
-    assert "Income: 1000.00" in bal
+    assert "Income: 1,000.00" in bal
     assert "Expense: 200.00" in bal
     assert "Balance: 800.00" in bal
 
@@ -58,9 +58,9 @@ def test_totals_output(tmp_path):
     run_cli(tmp_path, "add-income", "Job", "1500")
     run_cli(tmp_path, "add-expense", "Groceries", "500")
     totals = run_cli(tmp_path, "totals").stdout
-    assert "Total Income: 1500.00" in totals
+    assert "Total Income: 1,500.00" in totals
     assert "Total Expense: 500.00" in totals
-    assert "Net Balance: 1000.00" in totals
+    assert "Net Balance: 1,000.00" in totals
 
 
 def test_goal_warning(tmp_path):
@@ -123,7 +123,7 @@ def test_bank_balance_projection(tmp_path):
     budget_tool.DB_FILE = tmp_path / "budget.db"
     budget_tool.set_account("Bank", 1000, acct_type="Bank")
     out = run_cli(tmp_path, "bank-balance", "3").stdout
-    assert "1300.00" in out
+    assert "1,300.00" in out
 
 
 def test_totals_negative_warning(tmp_path):
