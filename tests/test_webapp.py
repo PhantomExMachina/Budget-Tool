@@ -111,3 +111,24 @@ def test_nav_contains_auto_scan(tmp_path):
     assert resp.status_code == 200
     assert b"/auto-scan" in resp.data
 
+
+def test_delete_monthly_expense(tmp_path):
+    client = setup_app(tmp_path)
+    budget_tool.add_category("Misc")
+    budget_tool.add_monthly_expense("Gym", 10)
+    budget_tool.add_transaction("Misc", 10, "expense", "Gym")
+
+    resp = client.post("/delete-monthly/Gym")
+    assert resp.status_code == 302
+
+    conn = budget_tool.get_connection()
+    cur = conn.execute(
+        "SELECT count(*) FROM monthly_expenses WHERE description=?", ("Gym",)
+    )
+    assert cur.fetchone()[0] == 0
+    cur = conn.execute(
+        "SELECT count(*) FROM transactions WHERE description=?", ("Gym",)
+    )
+    assert cur.fetchone()[0] == 0
+    conn.close()
+

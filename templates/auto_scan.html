@@ -71,16 +71,21 @@
   <h2 class="mt-4">Saved Monthly Expenses</h2>
   <table class="table table-bordered">
     <thead>
-      <tr><th>Description</th><th>Amount</th></tr>
+      <tr><th>Description</th><th>Amount</th><th></th></tr>
     </thead>
     <tbody>
     {% for desc, amt in monthly_expenses %}
       <tr>
         <td>{{ desc }}</td>
         <td>{{ amt|fmt }}</td>
+        <td>
+          <form method="post" action="{{ url_for('delete_monthly_expense_route', desc=desc) }}">
+            <button class="btn btn-sm btn-danger">Delete</button>
+          </form>
+        </td>
       </tr>
     {% else %}
-      <tr><td colspan="2">No monthly expenses saved.</td></tr>
+      <tr><td colspan="3">No monthly expenses saved.</td></tr>
     {% endfor %}
     </tbody>
   </table>

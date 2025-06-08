@@ -497,6 +497,15 @@ def monthly_expense_exists(desc: str) -> bool:
     return exists
 
 
+def delete_monthly_expense(desc: str) -> None:
+    """Delete a monthly expense and matching transactions."""
+    conn = get_connection()
+    conn.execute("DELETE FROM monthly_expenses WHERE description=?", (desc,))
+    conn.execute("DELETE FROM transactions WHERE description=?", (desc,))
+    conn.commit()
+    conn.close()
+
+
 def months_to_payoff(
     balance: float,
     payment: float,
