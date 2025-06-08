@@ -35,6 +35,7 @@ python3 budget_tool.py set-account <name> <balance> [--payment AMT]
                              [--tax AMT]
 python3 budget_tool.py delete-account <name>           # remove an account
 python3 budget_tool.py list-accounts                   # show account balances
+python3 budget_tool.py forecast [--months N]           # forecast account balances
 python3 budget_tool.py bank-balance <months>           # forecast bank balance
 python3 budget_tool.py history [CATEGORY] [--user NAME] [--limit N]
 python3 budget_tool.py --db mydata.db totals          # use a custom database

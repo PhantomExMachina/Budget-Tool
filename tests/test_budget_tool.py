@@ -183,3 +183,16 @@ def test_totals_forecast(tmp_path):
     assert "Account forecast after 1 month" in out
     assert "Card" in out
     assert "910.00" in out
+
+
+def test_forecast_command(tmp_path):
+    run_cli(tmp_path, "init")
+    import budget_tool
+    budget_tool.DB_FILE = tmp_path / "budget.db"
+    budget_tool.set_account("Bank", 1000, acct_type="Bank")
+    budget_tool.set_account("Card", 500, payment=50, acct_type="Credit Card")
+    out = run_cli(tmp_path, "forecast", "--months", "2").stdout
+    assert "Accounts with funds after 2 months" in out
+    assert "Accounts with money owed after 2 months" in out
+    assert "Bank" in out
+    assert "Card" in out
