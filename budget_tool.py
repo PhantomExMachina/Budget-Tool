@@ -150,10 +150,49 @@ def total_bank_balance() -> float:
     return total
 
 
+def total_asset_balance() -> float:
+    """Return the sum of balances for bank, crypto and stock accounts."""
+    conn = get_connection()
+    cur = conn.execute(
+        "SELECT balance FROM accounts WHERE type IN ('Bank','Crypto Wallet','Stock Account')"
+    )
+    total = sum(r[0] for r in cur.fetchall())
+    conn.close()
+    return total
+
+
+def get_all_accounts():
+    """Return list of all account records."""
+    conn = get_connection()
+    cur = conn.execute(
+        "SELECT name, balance, monthly_payment, type, apr, escrow, insurance, tax FROM accounts ORDER BY name"
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
 def bank_balance_after_months(months: int, user: str = "default") -> float:
     """Estimate bank balance after given months using current net."""
     _, _, net = calc_totals(user)
     return total_bank_balance() + net * months
+
+
+def account_balance_after_months(
+    balance: float,
+    payment: float,
+    apr: float = 0.0,
+    escrow: float = 0.0,
+    insurance: float = 0.0,
+    tax: float = 0.0,
+    months: int = 1,
+) -> float:
+    """Return projected balance after a number of months."""
+    rate = apr / 12 / 100
+    principal_payment = payment - escrow - insurance - tax
+    for _ in range(months):
+        balance = balance * (1 + rate) - principal_payment
+    return balance
 
 
 def months_until_bank_negative(user: str = "default") -> int | None:
@@ -492,18 +531,40 @@ def category_balance(name: str, user: str = "default"):
         conn.close()
 
 
-def show_totals(user: str = "default"):
-    """Print overall income, expenses and net balance for the user."""
+def show_totals(user: str = "default", months: int = 1):
+    """Print income, expenses, net and account forecasts."""
     income, expense, net = calc_totals(user)
+    assets = total_asset_balance()
     print(
         (
             f"Total Income: {fmt(income)}\nTotal Expense: {fmt(expense)}\n"
-            f"Net Balance: {fmt(net)} ({user})"
+            f"Net Balance: {fmt(net)} ({user})\nTotal Assets: {fmt(assets)}"
         )
     )
     warn = months_until_bank_negative(user)
     if warn is not None:
         print(f"Bank account will be negative in about {warn} months.")
+
+    accounts = get_all_accounts()
+    if accounts:
+        label = "month" if months == 1 else "months"
+        print(f"\nAccount forecast after {months} {label}:")
+        for row in accounts:
+            future = account_balance_after_months(
+                row["balance"],
+                row["monthly_payment"],
+                row["apr"],
+                row["escrow"],
+                row["insurance"],
+                row["tax"],
+                months,
+            )
+            change = future - row["balance"]
+            sign = "+" if change >= 0 else "-"
+            print(
+                f"- {row['name']} ({row['type']}): {fmt(future)} "
+                f"({sign}{fmt(abs(change))})"
+            )
 
 
 def list_categories():
@@ -614,6 +675,9 @@ def parse_args() -> argparse.Namespace:
 
     parser_totals = subparsers.add_parser("totals", help="Show overall totals")
     parser_totals.add_argument("--user", default="default")
+    parser_totals.add_argument(
+        "--months", type=int, default=1, help="Forecast account changes"
+    )
     subparsers.add_parser("list", help="List categories")
 
     parser_goal = subparsers.add_parser("set-goal", help="Set budget goal")
@@ -705,7 +769,7 @@ def main() -> None:
         category_balance(args.category, args.user)
     elif args.command == "totals":
         init_db()
-        show_totals(args.user)
+        show_totals(args.user, args.months)
     elif args.command == "list":
         init_db()
         list_categories()
