@@ -30,6 +30,27 @@ def get_totals(user: str = "default"):
     return income, expense, income - expense
 
 
+def get_accounts():
+    conn = budget_tool.get_connection()
+    cur = conn.execute(
+        "SELECT name, balance, monthly_payment FROM accounts ORDER BY name"
+    )
+    rows = cur.fetchall()
+    conn.close()
+    data = []
+    for r in rows:
+        months = budget_tool.months_to_payoff(r["balance"], r["monthly_payment"])
+        data.append(
+            {
+                "name": r["name"],
+                "balance": r["balance"],
+                "payment": r["monthly_payment"],
+                "months": months,
+            }
+        )
+    return data
+
+
 def get_history(limit: int = 50, user: str = "default"):
     conn = budget_tool.get_connection()
     user_id = budget_tool.get_user_id(conn, user)
@@ -53,8 +74,14 @@ def get_history(limit: int = 50, user: str = "default"):
 def index():
     cats = get_categories()
     income, expense, net = get_totals()
+    accounts = get_accounts()
     return render_template(
-        "index.html", categories=cats, income=income, expense=expense, net=net
+        "index.html",
+        categories=cats,
+        income=income,
+        expense=expense,
+        net=net,
+        accounts=accounts,
     )
 
 
@@ -66,6 +93,12 @@ def add_category_route():
     return redirect(url_for("index"))
 
 
+@app.route("/delete-category/<name>", methods=["POST"])
+def delete_category_route(name: str):
+    budget_tool.delete_category(name)
+    return redirect(url_for("index"))
+
+
 @app.route("/add-transaction", methods=["POST"])
 def add_transaction_route():
     category = request.form["category"]
@@ -74,6 +107,16 @@ def add_transaction_route():
     desc = request.form.get("description") or None
     item = request.form.get("item_name") or None
     budget_tool.add_transaction(category, amount, ttype, desc, item)
+    return redirect(url_for("index"))
+
+
+@app.route("/set-account", methods=["POST"])
+def set_account_route():
+    name = request.form.get("name")
+    balance = request.form.get("balance", type=float)
+    payment = request.form.get("payment", type=float, default=0.0)
+    if name and balance is not None:
+        budget_tool.set_account(name, balance, payment)
     return redirect(url_for("index"))
 
 

@@ -26,6 +26,9 @@ python3 budget_tool.py export-csv [--output FILE] [--user NAME]
 python3 budget_tool.py balance <category> [--user NAME]
 python3 budget_tool.py totals [--user NAME]            # show overall totals
 python3 budget_tool.py list                            # list all categories
+python3 budget_tool.py delete-category <name>          # remove a category
+python3 budget_tool.py set-account <name> <balance> [--payment AMT]
+python3 budget_tool.py list-accounts                   # show account balances
 python3 budget_tool.py history [CATEGORY] [--user NAME] [--limit N]
 python3 budget_tool.py --db mydata.db totals          # use a custom database
 ```
@@ -52,4 +55,4 @@ pip install -r requirements.txt
 python3 webapp.py
 ```
 
-This launches a local web server at `http://127.0.0.1:5000/` where you can view totals, manage categories and add transactions using a basic Bootstrap UI.
+This launches a local web server at `http://127.0.0.1:5000/` where you can view totals, manage categories, track account balances and add transactions using a basic Bootstrap UI.
