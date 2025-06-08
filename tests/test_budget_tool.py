@@ -237,3 +237,14 @@ def test_find_recurring_expenses():
     res = find_recurring_expenses([rec1, rec2])
     names = [r[0] for r in res]
     assert "Gym" in names
+
+
+def test_find_recurring_expenses_day_window():
+    """Charges on adjacent days should match within the window."""
+    from budget_tool import TransactionRecord, find_recurring_expenses
+
+    jan = [TransactionRecord(datetime(2023, 1, 20), "Service", 30)]
+    feb = [TransactionRecord(datetime(2023, 2, 21), "Service", 29.9)]
+
+    res = find_recurring_expenses([jan, feb], day_window=1)
+    assert res and res[0][0] == "Service"

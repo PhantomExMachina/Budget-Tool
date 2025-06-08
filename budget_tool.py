@@ -96,9 +96,22 @@ def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
 
 
 def find_recurring_expenses(
-    statements: Sequence[Sequence[TransactionRecord]], tolerance: float = 0.1
+    statements: Sequence[Sequence[TransactionRecord]],
+    tolerance: float = 0.1,
+    day_window: int = 0,
 ) -> list[tuple[str, float]]:
-    """Return charges that repeat monthly with similar amount and day."""
+    """Return charges that repeat monthly with similar amount and day.
+
+    Parameters
+    ----------
+    statements : Sequence[Sequence[TransactionRecord]]
+        Lists of transactions grouped by month.
+    tolerance : float, optional
+        Allowed relative difference in amounts for a match.
+    day_window : int, optional
+        Accept matches that occur within this many days of the base day.
+        A value of ``0`` preserves the previous exact-day behaviour.
+    """
     if not statements:
         return []
 
@@ -118,7 +131,7 @@ def find_recurring_expenses(
             for r in other:
                 if (
                     r.description.lower() == base.description.lower()
-                    and r.date.day == base.date.day
+                    and abs(r.date.day - base.date.day) <= day_window
                     and abs(r.amount - base.amount)
                     <= abs(base.amount) * tolerance
                 ):
