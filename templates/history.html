@@ -5,7 +5,7 @@
   <link id="theme-link" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.1/dist/cyborg/bootstrap.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+  <link id="font-link" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
   <link id="custom-theme-link" rel="stylesheet" href="{{ url_for('static', filename='style-dark.css') }}">
   <title>Transaction History</title>
 </head>
@@ -73,11 +73,31 @@
   </table>
   <script>
   const themes = {
-    cyborg: {mode: 'dark'},
-    darkly: {mode: 'dark'},
-    flatly: {mode: 'light'},
-    litera: {mode: 'light'},
-    solar: {mode: 'light'},
+    cyborg: {
+      mode: 'dark',
+      font: "'Orbitron', sans-serif",
+      url: 'https://fonts.googleapis.com/css2?family=Orbitron&display=swap'
+    },
+    darkly: {
+      mode: 'dark',
+      font: "'Share Tech Mono', monospace",
+      url: 'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'
+    },
+    flatly: {
+      mode: 'light',
+      font: "'Open Sans', sans-serif",
+      url: 'https://fonts.googleapis.com/css2?family=Open+Sans&display=swap'
+    },
+    litera: {
+      mode: 'light',
+      font: "'Lora', serif",
+      url: 'https://fonts.googleapis.com/css2?family=Lora&display=swap'
+    },
+    solar: {
+      mode: 'light',
+      font: "'Inconsolata', monospace",
+      url: 'https://fonts.googleapis.com/css2?family=Inconsolata&display=swap'
+    },
   };
   const bootBase = 'https://cdn.jsdelivr.net/npm/bootswatch@5.3.1/dist/';
   const staticBase = '{{ url_for("static", filename="") }}';
@@ -87,6 +107,8 @@
     document.getElementById('theme-link').href = `${bootBase}${name}/bootstrap.min.css`;
     const styleFile = themes[name].mode === 'dark' ? 'style-dark.css' : 'style-light.css';
     document.getElementById('custom-theme-link').href = `${staticBase}${styleFile}`;
+    document.getElementById('font-link').href = themes[name].url;
+    document.documentElement.style.setProperty('--app-font', themes[name].font);
     localStorage.setItem('theme', name);
     themeSelect.value = name;
   }

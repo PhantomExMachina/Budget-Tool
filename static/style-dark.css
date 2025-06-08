@@ -1,5 +1,5 @@
 body {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--app-font, 'Orbitron', sans-serif);
     background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
     color: #e0e0e0;
 }
