@@ -289,11 +289,18 @@ def months_to_payoff(
         return None
     if apr <= 0:
         return int((balance + principal_payment - 1) // principal_payment)
+
     r = apr / 12 / 100
-    if principal_payment <= balance * r:
-        return None
-    months = -math.log(1 - balance * r / principal_payment) / math.log(1 + r)
-    return math.ceil(months)
+    months = 0
+    prev = balance
+    while balance > 0 and months < 10000:
+        interest = balance * r
+        balance = balance + interest - principal_payment
+        months += 1
+        if balance >= prev:
+            return None
+        prev = balance
+    return months
 
 
 def login_user(id_token: str) -> str | None:

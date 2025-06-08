@@ -39,6 +39,7 @@ def get_accounts():
     rows = cur.fetchall()
     conn.close()
     data = []
+    warnings = []
     for r in rows:
         months = budget_tool.months_to_payoff(
             r["balance"],
@@ -48,6 +49,14 @@ def get_accounts():
             r["insurance"],
             r["tax"],
         )
+        rate = r["apr"] / 12 / 100
+        principal_payment = (
+            r["monthly_payment"] - r["escrow"] - r["insurance"] - r["tax"]
+        )
+        next_balance = r["balance"] * (1 + rate) - principal_payment
+        increase = next_balance > r["balance"]
+        if increase:
+            warnings.append(r["name"])
         data.append(
             {
                 "name": r["name"],
@@ -55,9 +64,10 @@ def get_accounts():
                 "payment": r["monthly_payment"],
                 "type": r["type"],
                 "months": months,
+                "increase": increase,
             }
         )
-    return data
+    return data, warnings
 
 
 def get_asset_accounts():
@@ -95,7 +105,7 @@ def get_history(limit: int = 50, user: str = "default"):
 def index():
     cats = get_categories()
     income, expense, net = get_totals()
-    accounts = get_accounts()
+    accounts, warnings = get_accounts()
     assets = get_asset_accounts()
     return render_template(
         "index.html",
@@ -105,6 +115,7 @@ def index():
         net=net,
         accounts=accounts,
         assets=assets,
+        payment_warnings=warnings,
     )
 
 
