@@ -8,6 +8,7 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 import math
+import io
 
 
 def fmt(amount: float) -> str:
@@ -422,6 +423,51 @@ def export_csv(output_file: str, user: str = "default"):
         for r in rows:
             writer.writerow(r)
     print(f"Exported {len(rows)} transactions for {user} to {output_file}")
+
+
+def export_csv_string(user: str = "default") -> str:
+    """Return all transactions for the user as CSV text."""
+    conn = get_connection()
+    user_id = get_user_id(conn, user)
+    cur = conn.execute(
+        """
+        SELECT c.name, t.amount, t.type, t.description, t.item_name, t.created_at
+        FROM transactions t
+        JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = ?
+        ORDER BY t.created_at ASC
+        """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["category", "amount", "type", "description", "item_name", "created_at"])
+    for r in rows:
+        writer.writerow(r)
+    conn.close()
+    return output.getvalue()
+
+
+def get_goal_status(user: str = "default") -> list[tuple[str, float, float]]:
+    """Return list of (category, goal amount, spent amount) for the user."""
+    conn = get_connection()
+    user_id = get_user_id(conn, user)
+    cur = conn.execute(
+        """
+        SELECT c.name, g.amount,
+            (SELECT SUM(t.amount) FROM transactions t
+             WHERE t.category_id = c.id AND t.user_id=? AND t.type='expense') as spent
+        FROM goals g
+        JOIN categories c ON g.category_id = c.id
+        WHERE g.user_id=?
+        ORDER BY c.name
+        """,
+        (user_id, user_id),
+    )
+    rows = [(r[0], r[1], r[2] or 0.0) for r in cur.fetchall()]
+    conn.close()
+    return rows
 
 
 def get_category_id(conn, name: str):
