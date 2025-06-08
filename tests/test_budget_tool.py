@@ -146,3 +146,25 @@ def test_months_to_payoff_interest(tmp_path):
 
     assert months_to_payoff(1000, 100, 0) == 10
     assert months_to_payoff(1000, 100, 20) > 10
+
+
+def test_set_account_with_apr_cli(tmp_path):
+    run_cli(tmp_path, "init")
+    run_cli(
+        tmp_path,
+        "set-account",
+        "Card",
+        "5000",
+        "--payment",
+        "50",
+        "--apr",
+        "10",
+    )
+    out = run_cli(tmp_path, "list-accounts").stdout
+    assert "Card" in out
+    months = None
+    for line in out.splitlines():
+        if "Card" in line:
+            months = int(line.split("months")[1].split(")")[0].strip())
+            break
+    assert months and months > 100
