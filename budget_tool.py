@@ -157,7 +157,7 @@ def find_recurring_expenses(
             amounts.append(match_amt)
         else:  # only executed if no break occurred -> found in all months
             avg = sum(amounts) / len(amounts)
-            recurring.append((base.description, avg))
+            recurring.append((base.description, abs(avg)))
 
     return recurring
 
@@ -480,6 +480,7 @@ def add_monthly_expense(
     desc: str, amount: float, category: str = "Misc", user: str = "default"
 ) -> None:
     """Insert or replace a monthly expense and create a transaction if needed."""
+    amount = abs(amount)
     conn = get_connection()
     conn.execute(
         "INSERT OR REPLACE INTO monthly_expenses(description, amount) VALUES(?,?)",
