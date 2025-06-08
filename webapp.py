@@ -1,3 +1,4 @@
+import io
 import budget_tool
 from flask import Flask, render_template, request, redirect, url_for, Response
 
@@ -201,6 +202,25 @@ def forecast_route():
         debts=debts,
         months=months,
         label=label,
+    )
+
+
+@app.route("/auto-scan", methods=["GET", "POST"])
+def auto_scan():
+    """Scan uploaded statements for recurring expenses."""
+    results = None
+    cats = get_categories()
+    if request.method == "POST" and request.files:
+        statements = []
+        files = request.files.getlist("statement")
+        for f in files:
+            if not f or not f.filename:
+                continue
+            data = io.StringIO(f.read().decode("utf-8"))
+            statements.append(budget_tool.parse_statement_csv(data))
+        results = budget_tool.find_recurring_expenses(statements)
+    return render_template(
+        "auto_scan.html", results=results or [], categories=cats
     )
 
 

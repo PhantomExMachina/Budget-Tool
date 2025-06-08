@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import io
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -78,4 +79,19 @@ def test_forecast_route(tmp_path):
     resp = client.get("/forecast")
     assert resp.status_code == 200
     assert b"Account Forecast" in resp.data
+
+
+def test_auto_scan_route(tmp_path):
+    client = setup_app(tmp_path)
+    data1 = b"date,description,amount\n2023-01-01,Gym,10\n"
+    data2 = b"date,description,amount\n2023-02-01,Gym,10\n"
+    data = {
+        "statement": [
+            (io.BytesIO(data1), "jan.csv"),
+            (io.BytesIO(data2), "feb.csv"),
+        ]
+    }
+    resp = client.post("/auto-scan", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 200
+    assert b"Gym" in resp.data
 

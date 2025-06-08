@@ -9,6 +9,8 @@ from pathlib import Path
 from datetime import datetime
 import math
 import io
+from dataclasses import dataclass
+from typing import Iterable, Sequence
 
 
 def fmt(amount: float) -> str:
@@ -22,6 +24,89 @@ except Exception:  # pragma: no cover - optional dependency
 
 DEFAULT_DB = Path(__file__).with_name("budget.db")
 DB_FILE = Path(os.environ.get("BUDGET_DB", DEFAULT_DB))
+
+
+@dataclass
+class TransactionRecord:
+    """Simple record for parsed statement transactions."""
+
+    date: datetime
+    description: str
+    amount: float
+
+
+def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
+    """Parse a simple CSV bank statement and return records."""
+    close = False
+    if isinstance(path_or_file, (str, os.PathLike)):
+        f = open(path_or_file, newline="", encoding="utf-8")
+        close = True
+    else:
+        f = path_or_file
+        if hasattr(f, "seek"):
+            f.seek(0)
+    try:
+        reader = csv.reader(f)
+        rows = list(reader)
+    finally:
+        if close:
+            f.close()
+
+    if not rows:
+        return []
+
+    header = [c.lower().strip() for c in rows[0]]
+    has_header = "amount" in header and "description" in header
+    start = 1 if has_header else 0
+
+    records: list[TransactionRecord] = []
+    for row in rows[start:]:
+        if len(row) < 3:
+            continue
+        if has_header:
+            mapping = {header[i]: row[i] for i in range(len(header))}
+            date_str = mapping.get("date", row[0])
+            desc = mapping.get("description", row[1])
+            amt_str = mapping.get("amount", row[2])
+        else:
+            date_str, desc, amt_str = row[0], row[1], row[2]
+        try:
+            dt = datetime.fromisoformat(date_str)
+        except ValueError:
+            try:
+                dt = datetime.strptime(date_str, "%Y-%m-%d")
+            except ValueError:
+                continue
+        amt = float(amt_str.replace("$", "").replace(",", ""))
+        records.append(TransactionRecord(dt, desc.strip(), amt))
+    return records
+
+
+def find_recurring_expenses(
+    statements: Sequence[Sequence[TransactionRecord]], tolerance: float = 0.1
+) -> list[tuple[str, float]]:
+    """Return merchants that appear every month with similar amounts."""
+    if not statements:
+        return []
+
+    month_maps: list[dict[str, float]] = []
+    for recs in statements:
+        m: dict[str, float] = {}
+        for r in recs:
+            m[r.description] = m.get(r.description, 0.0) + r.amount
+        month_maps.append(m)
+
+    merchants = set(month_maps[0].keys())
+    for m in month_maps[1:]:
+        merchants &= set(m.keys())
+
+    recurring: list[tuple[str, float]] = []
+    for merch in merchants:
+        amounts = [m[merch] for m in month_maps]
+        avg = sum(amounts) / len(amounts)
+        if all(abs(a - avg) <= abs(avg) * tolerance for a in amounts):
+            recurring.append((merch, avg))
+    return recurring
 
 
 def get_connection():

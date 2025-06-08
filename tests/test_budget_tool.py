@@ -1,6 +1,7 @@
 import sqlite3
 import subprocess
 from pathlib import Path
+from datetime import datetime
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "budget_tool.py"
@@ -196,3 +197,30 @@ def test_forecast_command(tmp_path):
     assert "Accounts with money owed after 2 months" in out
     assert "Bank" in out
     assert "Card" in out
+
+
+def test_parse_statement_csv(tmp_path):
+    csv_text = "date,description,amount\n2023-01-01,Gym,10\n2023-01-02,Netflix,15"
+    f = tmp_path / "s.csv"
+    f.write_text(csv_text)
+    from budget_tool import parse_statement_csv
+
+    records = parse_statement_csv(f)
+    assert len(records) == 2
+    assert records[0].description == "Gym"
+    assert records[0].amount == 10
+
+
+def test_find_recurring_expenses():
+    from budget_tool import TransactionRecord, find_recurring_expenses
+    rec1 = [
+        TransactionRecord(datetime(2023, 1, 1), "Gym", 10),
+        TransactionRecord(datetime(2023, 1, 2), "Store", 5),
+    ]
+    rec2 = [
+        TransactionRecord(datetime(2023, 2, 1), "Gym", 10.05),
+        TransactionRecord(datetime(2023, 2, 5), "Other", 3),
+    ]
+    res = find_recurring_expenses([rec1, rec2])
+    names = [r[0] for r in res]
+    assert "Gym" in names
