@@ -137,6 +137,28 @@ def update_categories_route():
     return redirect(url_for("index"))
 
 
+@app.route("/update-accounts", methods=["POST"])
+def update_accounts_route():
+    deletes = request.form.getlist("delete")
+    for d in deletes:
+        budget_tool.delete_account(d)
+    i = 0
+    while True:
+        old = request.form.get(f"old_{i}")
+        if old is None:
+            break
+        name = request.form.get(f"name_{i}")
+        balance = request.form.get(f"balance_{i}", type=float)
+        payment = request.form.get(f"payment_{i}", type=float, default=0.0)
+        acct_type = request.form.get(f"type_{i}")
+        if name and balance is not None:
+            budget_tool.set_account(name, balance, payment, acct_type)
+            if name != old:
+                budget_tool.delete_account(old)
+        i += 1
+    return redirect(url_for("index"))
+
+
 @app.route("/add-transaction", methods=["POST"])
 def add_transaction_route():
     category = request.form["category"]
