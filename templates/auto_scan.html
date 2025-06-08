@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link id="theme-link" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.1/dist/cyborg/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="font-link" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+  <link id="custom-theme-link" rel="stylesheet" href="{{ url_for('static', filename='style-dark.css') }}">
+  <title>Auto Scan</title>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('overview') }}">Budget Tool</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('overview') }}">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('manage') }}">Manage</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('history') }}">History</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('forecast_route') }}">Forecast</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<div class="container mt-4">
+  <h1>Auto Scan</h1>
+  <form method="post" enctype="multipart/form-data" class="mb-4">
+    <input type="file" name="statement" multiple required>
+    <button class="btn btn-primary" type="submit">Scan</button>
+  </form>
+  {% if results %}
+  <h2>Recurring Expenses</h2>
+  <table class="table table-bordered">
+    <thead>
+      <tr><th>Description</th><th>Amount</th></tr>
+    </thead>
+    <tbody>
+    {% for desc, amt in results %}
+      <tr><td>{{ desc }}</td><td>{{ amt|fmt }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>No recurring expenses found.</p>
+  {% endif %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
