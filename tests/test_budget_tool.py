@@ -103,3 +103,13 @@ def test_custom_db_path(tmp_path):
     custom = tmp_path / "custom.db"
     run_cli(tmp_path, "init", db_path=custom)
     assert custom.exists()
+
+
+def test_delete_account(tmp_path):
+    run_cli(tmp_path, "init")
+    run_cli(tmp_path, "set-account", "Bank", "50")
+    before = run_cli(tmp_path, "list-accounts").stdout
+    assert "Bank" in before
+    run_cli(tmp_path, "delete-account", "Bank")
+    after = run_cli(tmp_path, "list-accounts").stdout
+    assert "Bank" not in after

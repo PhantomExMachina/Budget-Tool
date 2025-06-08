@@ -103,6 +103,7 @@
         <th>Balance</th>
         <th>Monthly Payment</th>
         <th>Months Left</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -113,9 +114,14 @@
         <td>{{ acc.balance }}</td>
         <td>{{ acc.payment }}</td>
         <td>{{ acc.months if acc.months is not none else 'n/a' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('delete_account_route', name=acc.name) }}" class="d-inline">
+            <button class="btn btn-danger btn-sm">Delete</button>
+          </form>
+        </td>
       </tr>
     {% else %}
-      <tr><td colspan="5">No accounts</td></tr>
+      <tr><td colspan="6">No accounts</td></tr>
     {% endfor %}
     </tbody>
   </table>

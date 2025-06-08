@@ -190,6 +190,18 @@ def set_account(
     print(f"Account '{name}' set to {balance:.2f} with payment {payment:.2f}")
 
 
+def delete_account(name: str) -> None:
+    """Remove an account from the database."""
+    conn = get_connection()
+    cur = conn.execute("DELETE FROM accounts WHERE name=?", (name,))
+    conn.commit()
+    conn.close()
+    if cur.rowcount:
+        print(f"Account '{name}' deleted.")
+    else:
+        print(f"Account '{name}' not found.")
+
+
 def list_accounts() -> None:
     """Print all account balances and payoff estimates."""
     conn = get_connection()
@@ -576,6 +588,11 @@ def parse_args() -> argparse.Namespace:
     parser_acc.add_argument("balance", type=float)
     parser_acc.add_argument("--payment", type=float, default=0.0)
 
+    parser_del_acc = subparsers.add_parser(
+        "delete-account", help="Delete an account"
+    )
+    parser_del_acc.add_argument("name")
+
     subparsers.add_parser("list-accounts", help="List account balances")
 
     parser_hist = subparsers.add_parser(
@@ -643,6 +660,9 @@ def main() -> None:
     elif args.command == "list-accounts":
         init_db()
         list_accounts()
+    elif args.command == "delete-account":
+        init_db()
+        delete_account(args.name)
     else:
         print("No command provided. Use -h for help.")
 
