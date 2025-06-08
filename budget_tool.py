@@ -98,27 +98,39 @@ def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
 def find_recurring_expenses(
     statements: Sequence[Sequence[TransactionRecord]], tolerance: float = 0.1
 ) -> list[tuple[str, float]]:
-    """Return merchants that appear every month with similar amounts."""
+    """Return charges that repeat monthly with similar amount and day."""
     if not statements:
         return []
 
-    month_maps: list[dict[str, float]] = []
-    for recs in statements:
-        m: dict[str, float] = {}
-        for r in recs:
-            m[r.description] = m.get(r.description, 0.0) + r.amount
-        month_maps.append(m)
-
-    merchants = set(month_maps[0].keys())
-    for m in month_maps[1:]:
-        merchants &= set(m.keys())
-
+    # start with the first month's transactions and look for matches
+    first_month = statements[0]
     recurring: list[tuple[str, float]] = []
-    for merch in merchants:
-        amounts = [m[merch] for m in month_maps]
-        avg = sum(amounts) / len(amounts)
-        if all(abs(a - avg) <= abs(avg) * tolerance for a in amounts):
-            recurring.append((merch, avg))
+    seen: set[tuple[str, int]] = set()
+
+    for base in first_month:
+        key = (base.description.lower(), base.date.day)
+        if key in seen:
+            continue
+        seen.add(key)
+        amounts = [base.amount]
+        for other in statements[1:]:
+            match_amt = None
+            for r in other:
+                if (
+                    r.description.lower() == base.description.lower()
+                    and r.date.day == base.date.day
+                    and abs(r.amount - base.amount)
+                    <= abs(base.amount) * tolerance
+                ):
+                    match_amt = r.amount
+                    break
+            if match_amt is None:
+                break
+            amounts.append(match_amt)
+        else:  # only executed if no break occurred -> found in all months
+            avg = sum(amounts) / len(amounts)
+            recurring.append((base.description, avg))
+
     return recurring
 
 
