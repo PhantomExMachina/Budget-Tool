@@ -23,29 +23,15 @@ def get_categories():
 
 
 def get_totals(user: str = "default"):
-    conn = budget_tool.get_connection()
-    user_id = budget_tool.get_user_id(conn, user)
-    cur = conn.execute(
-        "SELECT type, SUM(amount) FROM transactions WHERE user_id=? GROUP BY type",
-        (user_id,),
-    )
-    totals = {row[0]: row[1] or 0 for row in cur.fetchall()}
-    conn.close()
-    income = totals.get("income", 0)
-    expense = totals.get("expense", 0)
-    return income, expense, income - expense
+    """Return income, expense and net for the given user."""
+    return budget_tool.calc_totals(user)
 
 
 def get_accounts():
-    conn = budget_tool.get_connection()
-    cur = conn.execute(
-        "SELECT name, balance, monthly_payment, type, apr, escrow, insurance, tax "
-        "FROM accounts ORDER BY name"
-    )
-    rows = cur.fetchall()
-    conn.close()
-    data = []
-    warnings = []
+    """Return account info including payoff estimates and warnings."""
+    rows = budget_tool.get_all_accounts()
+    data: list[dict] = []
+    warnings: list[str] = []
     for r in rows:
         months = budget_tool.months_to_payoff(
             r["balance"],
@@ -55,11 +41,15 @@ def get_accounts():
             r["insurance"],
             r["tax"],
         )
-        rate = r["apr"] / 12 / 100
-        principal_payment = (
-            r["monthly_payment"] - r["escrow"] - r["insurance"] - r["tax"]
+        next_balance = budget_tool.account_balance_after_months(
+            r["balance"],
+            r["monthly_payment"],
+            r["apr"],
+            r["escrow"],
+            r["insurance"],
+            r["tax"],
+            1,
         )
-        next_balance = r["balance"] * (1 + rate) - principal_payment
         increase = next_balance > r["balance"]
         if increase:
             warnings.append(r["name"])
@@ -77,15 +67,13 @@ def get_accounts():
 
 
 def get_asset_accounts():
-    conn = budget_tool.get_connection()
-    cur = conn.execute(
-        "SELECT name, balance, type FROM accounts "
-        "WHERE type IN ('Bank','Crypto Wallet','Stock Account') "
-        "ORDER BY name"
-    )
-    rows = cur.fetchall()
-    conn.close()
-    return [{"name": r["name"], "balance": r["balance"], "type": r["type"]} for r in rows]
+    """Return accounts considered assets (bank, crypto and stock)."""
+    rows = budget_tool.get_all_accounts()
+    return [
+        {"name": r["name"], "balance": r["balance"], "type": r["type"]}
+        for r in rows
+        if r["type"] in ("Bank", "Crypto Wallet", "Stock Account")
+    ]
 
 
 def get_history(limit: int = 50, user: str = "default"):
@@ -120,6 +108,8 @@ def index():
     income, expense, net = get_totals()
     accounts, warnings = get_accounts()
     assets = get_asset_accounts()
+    total_assets = budget_tool.total_asset_balance()
+    bank_warning = budget_tool.months_until_bank_negative()
     goals = get_goals()
     return render_template(
         "index.html",
@@ -129,6 +119,8 @@ def index():
         net=net,
         accounts=accounts,
         assets=assets,
+        total_assets=total_assets,
+        bank_warning=bank_warning,
         goals=goals,
         payment_warnings=warnings,
     )

@@ -65,7 +65,13 @@
     <li>Income: {{ income|fmt }}</li>
     <li>Expense: {{ expense|fmt }}</li>
     <li>Net Balance: {{ net|fmt }}</li>
+    <li>Total Assets: {{ total_assets|fmt }}</li>
   </ul>
+  {% if bank_warning is not none %}
+  <div class="alert alert-warning" role="alert">
+    Bank account will be negative in about {{ bank_warning }} months.
+  </div>
+  {% endif %}
   <a class="btn btn-secondary mb-3" href="{{ url_for('export_csv_route') }}">Export CSV</a>
 
   <h2 class="d-flex align-items-center">Categories <button id="edit-cats" class="btn btn-sm btn-secondary ms-2">Edit</button></h2>
