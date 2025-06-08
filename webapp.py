@@ -218,7 +218,7 @@ def auto_scan():
                 continue
             data = io.StringIO(f.read().decode("utf-8"))
             statements.append(budget_tool.parse_statement_csv(data))
-        results = budget_tool.find_recurring_expenses(statements)
+        results = budget_tool.find_recurring_expenses(statements, day_window=1)
     return render_template(
         "auto_scan.html", results=results or [], categories=cats
     )
