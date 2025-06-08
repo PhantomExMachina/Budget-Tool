@@ -2,6 +2,7 @@
 """Simple CLI-based budgeting tool using SQLite."""
 
 import argparse
+import csv
 import sqlite3
 from pathlib import Path
 from datetime import datetime
@@ -19,6 +20,12 @@ def init_db():
     conn = get_connection()
     cur = conn.cursor()
     cur.execute(
+        """CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL
+            )"""
+    )
+    cur.execute(
         """CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL
@@ -28,13 +35,28 @@ def init_db():
         """CREATE TABLE IF NOT EXISTS transactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 category_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
                 amount REAL NOT NULL,
                 type TEXT CHECK(type IN ('income','expense')) NOT NULL,
                 description TEXT,
                 created_at TEXT NOT NULL,
-                FOREIGN KEY(category_id) REFERENCES categories(id)
+                FOREIGN KEY(category_id) REFERENCES categories(id),
+                FOREIGN KEY(user_id) REFERENCES users(id)
             )"""
     )
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS goals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                UNIQUE(category_id, user_id),
+                FOREIGN KEY(category_id) REFERENCES categories(id),
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )"""
+    )
+    # ensure default user exists
+    cur.execute("INSERT OR IGNORE INTO users(username) VALUES('default')")
     conn.commit()
     conn.close()
 
@@ -51,6 +73,58 @@ def add_category(name: str):
         conn.close()
 
 
+def add_user(username: str):
+    conn = get_connection()
+    try:
+        conn.execute("INSERT INTO users(username) VALUES(?)", (username,))
+        conn.commit()
+        print(f"User '{username}' added.")
+    except sqlite3.IntegrityError:
+        print(f"User '{username}' already exists.")
+    finally:
+        conn.close()
+
+
+def set_goal(category: str, amount: float, user: str = "default"):
+    conn = get_connection()
+    try:
+        cat_id = get_category_id(conn, category)
+        user_id = get_user_id(conn, user)
+        conn.execute(
+            "INSERT INTO goals(category_id, user_id, amount) VALUES(?,?,?) "
+            "ON CONFLICT(category_id, user_id) DO UPDATE SET amount=excluded.amount",
+            (cat_id, user_id, amount),
+        )
+        conn.commit()
+        print(f"Goal for {category} set to {amount:.2f} for {user}.")
+    except ValueError as e:
+        print(e)
+    finally:
+        conn.close()
+
+
+def export_csv(output_file: str, user: str = "default"):
+    conn = get_connection()
+    user_id = get_user_id(conn, user)
+    cur = conn.execute(
+        """
+        SELECT c.name, t.amount, t.type, t.description, t.created_at
+        FROM transactions t
+        JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = ?
+        ORDER BY t.created_at ASC
+        """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+    with open(output_file, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["category", "amount", "type", "description", "created_at"])
+        for r in rows:
+            writer.writerow(r)
+    print(f"Exported {len(rows)} transactions for {user} to {output_file}")
+
+
 def get_category_id(conn, name: str):
     cur = conn.execute("SELECT id FROM categories WHERE name=?", (name,))
     row = cur.fetchone()
@@ -59,53 +133,91 @@ def get_category_id(conn, name: str):
     raise ValueError(f"Category '{name}' not found")
 
 
-def add_transaction(name: str, amount: float, trans_type: str, description: str = None):
+def get_user_id(conn, username: str) -> int:
+    cur = conn.execute("SELECT id FROM users WHERE username=?", (username,))
+    row = cur.fetchone()
+    if row:
+        return row[0]
+    raise ValueError(f"User '{username}' not found")
+
+
+def add_transaction(name: str, amount: float, trans_type: str, description: str | None = None, user: str = "default"):
     conn = get_connection()
     try:
         cat_id = get_category_id(conn, name)
+        user_id = get_user_id(conn, user)
         conn.execute(
-            "INSERT INTO transactions(category_id, amount, type, description, created_at) "
-            "VALUES(?,?,?,?,?)",
-            (cat_id, amount, trans_type, description, datetime.now().isoformat()),
+            "INSERT INTO transactions(category_id, user_id, amount, type, description, created_at) "
+            "VALUES(?,?,?,?,?,?)",
+            (
+                cat_id,
+                user_id,
+                amount,
+                trans_type,
+                description,
+                datetime.now().isoformat(),
+            ),
         )
         conn.commit()
-        print(f"{trans_type.title()} of {amount:.2f} added to {name}.")
+        print(f"{trans_type.title()} of {amount:.2f} added to {name} for {user}.")
+        if trans_type == "expense":
+            cur = conn.execute(
+                "SELECT amount FROM goals WHERE category_id=? AND user_id=?",
+                (cat_id, user_id),
+            )
+            row = cur.fetchone()
+            if row:
+                goal_amount = row[0]
+                cur = conn.execute(
+                    "SELECT SUM(amount) FROM transactions WHERE category_id=? AND user_id=? AND type='expense'",
+                    (cat_id, user_id),
+                )
+                spent = cur.fetchone()[0] or 0
+                if spent > goal_amount:
+                    print(f"Warning: {user} exceeded goal for {name} ({spent:.2f}/{goal_amount:.2f})")
     except ValueError as e:
         print(e)
     finally:
         conn.close()
 
 
-def category_balance(name: str):
+def category_balance(name: str, user: str = "default"):
     conn = get_connection()
     try:
         cat_id = get_category_id(conn, name)
+        user_id = get_user_id(conn, user)
         cur = conn.execute(
             "SELECT type, SUM(amount) AS total FROM transactions "
-            "WHERE category_id=? GROUP BY type",
-            (cat_id,),
+            "WHERE category_id=? AND user_id=? GROUP BY type",
+            (cat_id, user_id),
         )
         totals = {row[0]: row[1] or 0 for row in cur.fetchall()}
         income = totals.get("income", 0)
         expense = totals.get("expense", 0)
         balance = income - expense
-        print(f"Category: {name}\n  Income: {income:.2f}\n  Expense: {expense:.2f}\n  Balance: {balance:.2f}")
+        print(
+            f"Category: {name} ({user})\n  Income: {income:.2f}\n  Expense: {expense:.2f}\n  Balance: {balance:.2f}"
+        )
     except ValueError as e:
         print(e)
     finally:
         conn.close()
 
 
-def show_totals():
+def show_totals(user: str = "default"):
     conn = get_connection()
+    user_id = get_user_id(conn, user)
     cur = conn.execute(
-        "SELECT type, SUM(amount) FROM transactions GROUP BY type"
+        "SELECT type, SUM(amount) FROM transactions WHERE user_id=? GROUP BY type",
+        (user_id,),
     )
     totals = {row[0]: row[1] or 0 for row in cur.fetchall()}
     income = totals.get("income", 0)
     expense = totals.get("expense", 0)
     net = income - expense
-    print(f"Total Income: {income:.2f}\nTotal Expense: {expense:.2f}\nNet Balance: {net:.2f}")
+    print(
+        f"Total Income: {income:.2f}\nTotal Expense: {expense:.2f}\nNet Balance: {net:.2f} ({user})"
+    )
     conn.close()
 
 
@@ -121,10 +233,11 @@ def list_categories():
     conn.close()
 
 
-def list_transactions(category: str | None, limit: int):
+def list_transactions(category: str | None, limit: int, user: str = "default"):
     """Display recent transactions, optionally filtered by category."""
     conn = get_connection()
     try:
+        user_id = get_user_id(conn, user)
         if category:
             cat_id = get_category_id(conn, category)
             cur = conn.execute(
@@ -132,11 +245,11 @@ def list_transactions(category: str | None, limit: int):
                 SELECT c.name, t.amount, t.type, t.description, t.created_at
                 FROM transactions t
                 JOIN categories c ON t.category_id = c.id
-                WHERE t.category_id = ?
+                WHERE t.category_id = ? AND t.user_id = ?
                 ORDER BY t.created_at DESC
                 LIMIT ?
                 """,
-                (cat_id, limit),
+                (cat_id, user_id, limit),
             )
         else:
             cur = conn.execute(
@@ -144,10 +257,11 @@ def list_transactions(category: str | None, limit: int):
                 SELECT c.name, t.amount, t.type, t.description, t.created_at
                 FROM transactions t
                 JOIN categories c ON t.category_id = c.id
+                WHERE t.user_id = ?
                 ORDER BY t.created_at DESC
                 LIMIT ?
                 """,
-                (limit,),
+                (user_id, limit),
             )
         rows = cur.fetchall()
         for row in rows:
@@ -169,6 +283,9 @@ def parse_args():
 
     parser_init = subparsers.add_parser("init", help="Initialize the database")
 
+    parser_add_user = subparsers.add_parser("add-user", help="Add a user")
+    parser_add_user.add_argument("username")
+
     parser_add_cat = subparsers.add_parser("add-category", help="Add a new category")
     parser_add_cat.add_argument("name")
 
@@ -176,23 +293,37 @@ def parse_args():
     parser_income.add_argument("category")
     parser_income.add_argument("amount", type=float)
     parser_income.add_argument("-d", "--description", default=None)
+    parser_income.add_argument("--user", default="default")
 
     parser_expense = subparsers.add_parser("add-expense", help="Add expense entry")
     parser_expense.add_argument("category")
     parser_expense.add_argument("amount", type=float)
     parser_expense.add_argument("-d", "--description", default=None)
+    parser_expense.add_argument("--user", default="default")
 
     parser_balance = subparsers.add_parser("balance", help="Show balance for a category")
     parser_balance.add_argument("category")
+    parser_balance.add_argument("--user", default="default")
 
-    subparsers.add_parser("totals", help="Show overall totals")
+    parser_totals = subparsers.add_parser("totals", help="Show overall totals")
+    parser_totals.add_argument("--user", default="default")
     subparsers.add_parser("list", help="List categories")
+
+    parser_goal = subparsers.add_parser("set-goal", help="Set budget goal")
+    parser_goal.add_argument("category")
+    parser_goal.add_argument("amount", type=float)
+    parser_goal.add_argument("--user", default="default")
+
+    parser_export = subparsers.add_parser("export-csv", help="Export transactions to CSV")
+    parser_export.add_argument("--output", default="transactions.csv")
+    parser_export.add_argument("--user", default="default")
 
     parser_hist = subparsers.add_parser(
         "history", help="Show recent transactions"
     )
     parser_hist.add_argument("category", nargs="?", default=None)
     parser_hist.add_argument("--limit", type=int, default=10)
+    parser_hist.add_argument("--user", default="default")
 
     return parser.parse_args()
 
@@ -202,27 +333,36 @@ def main():
     if args.command == "init":
         init_db()
         print(f"Database initialized at {DB_FILE}")
+    elif args.command == "add-user":
+        init_db()
+        add_user(args.username)
     elif args.command == "add-category":
         init_db()
         add_category(args.name)
     elif args.command == "add-income":
         init_db()
-        add_transaction(args.category, args.amount, "income", args.description)
+        add_transaction(args.category, args.amount, "income", args.description, args.user)
     elif args.command == "add-expense":
         init_db()
-        add_transaction(args.category, args.amount, "expense", args.description)
+        add_transaction(args.category, args.amount, "expense", args.description, args.user)
+    elif args.command == "set-goal":
+        init_db()
+        set_goal(args.category, args.amount, args.user)
+    elif args.command == "export-csv":
+        init_db()
+        export_csv(args.output, args.user)
     elif args.command == "balance":
         init_db()
-        category_balance(args.category)
+        category_balance(args.category, args.user)
     elif args.command == "totals":
         init_db()
-        show_totals()
+        show_totals(args.user)
     elif args.command == "list":
         init_db()
         list_categories()
     elif args.command == "history":
         init_db()
-        list_transactions(args.category, args.limit)
+        list_transactions(args.category, args.limit, args.user)
     else:
         print("No command provided. Use -h for help.")
 
