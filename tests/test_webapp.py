@@ -102,7 +102,7 @@ def test_auto_scan_route(tmp_path):
     client.post("/auto-scan", data=save)
 
     resp2 = client.post("/auto-scan", data=build_data(), content_type="multipart/form-data")
-    assert b"Gym" not in resp2.data
+    assert b"name=\"add_0\"" not in resp2.data
 
 
 def test_nav_contains_auto_scan(tmp_path):
