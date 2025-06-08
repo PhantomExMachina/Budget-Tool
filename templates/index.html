@@ -106,13 +106,13 @@
         <th>Balance</th>
         <th>Monthly Payment</th>
         <th>Months Left</th>
-        <th></th>
       </tr>
     </thead>
     <tbody>
     {% for acc in accounts %}
       <tr>
-        <td>
+        <td class="d-flex align-items-center">
+          <input type="checkbox" name="delete" value="{{ acc.name }}" class="form-check-input shadow-sm me-2 acct-check d-none">
           <select name="type_{{ loop.index0 }}" class="form-select form-select-sm acct-field" disabled>
             <option {% if acc.type == 'Bank' %}selected{% endif %}>Bank</option>
             <option {% if acc.type == 'Crypto Wallet' %}selected{% endif %}>Crypto Wallet</option>
@@ -123,6 +123,7 @@
             <option {% if acc.type == 'Loan' %}selected{% endif %}>Loan</option>
             <option {% if acc.type == 'Other' %}selected{% endif %}>Other</option>
           </select>
+          <input type="hidden" name="old_{{ loop.index0 }}" value="{{ acc.name }}">
         </td>
         <td>
           <input type="text" name="name_{{ loop.index0 }}" value="{{ acc.name }}" class="form-control-plaintext acct-field" readonly>
@@ -134,17 +135,14 @@
           <input type="number" step="0.01" name="payment_{{ loop.index0 }}" value="{{ acc.payment }}" class="form-control-plaintext acct-field" readonly>
         </td>
         <td>{{ acc.months if acc.months is not none else 'n/a' }}</td>
-        <td>
-          <input type="checkbox" name="delete" value="{{ acc.name }}" class="form-check-input acct-check d-none">
-          <input type="hidden" name="old_{{ loop.index0 }}" value="{{ acc.name }}">
-        </td>
       </tr>
     {% else %}
-      <tr><td colspan="6">No accounts</td></tr>
+      <tr><td colspan="5">No accounts</td></tr>
     {% endfor %}
     </tbody>
   </table>
   <div class="mt-2 d-none" id="acct-actions">
+    <button name="action" value="delete" class="btn btn-danger me-2">Delete</button>
     <button name="action" value="save" class="btn btn-primary">Save</button>
   </div>
   </form>
