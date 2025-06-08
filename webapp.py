@@ -33,18 +33,27 @@ def get_totals(user: str = "default"):
 def get_accounts():
     conn = budget_tool.get_connection()
     cur = conn.execute(
-        "SELECT name, balance, monthly_payment FROM accounts ORDER BY name"
+        "SELECT name, balance, monthly_payment, type, apr, escrow, insurance, tax "
+        "FROM accounts ORDER BY name"
     )
     rows = cur.fetchall()
     conn.close()
     data = []
     for r in rows:
-        months = budget_tool.months_to_payoff(r["balance"], r["monthly_payment"])
+        months = budget_tool.months_to_payoff(
+            r["balance"],
+            r["monthly_payment"],
+            r["apr"],
+            r["escrow"],
+            r["insurance"],
+            r["tax"],
+        )
         data.append(
             {
                 "name": r["name"],
                 "balance": r["balance"],
                 "payment": r["monthly_payment"],
+                "type": r["type"],
                 "months": months,
             }
         )
@@ -115,8 +124,23 @@ def set_account_route():
     name = request.form.get("name")
     balance = request.form.get("balance", type=float)
     payment = request.form.get("payment", type=float, default=0.0)
+    acct_type = request.form.get("account_type", "Other")
+    apr = request.form.get("apr", type=float, default=0.0)
+    escrow = request.form.get("escrow", type=float, default=0.0)
+    insurance = request.form.get("insurance", type=float, default=0.0)
+    tax = request.form.get("tax", type=float, default=0.0)
     if name and balance is not None:
-        budget_tool.set_account(name, balance, payment)
+        budget_tool.set_account(
+            name, balance, payment, acct_type, apr, escrow, insurance, tax
+        )
+        if acct_type == "Credit Card" and payment:
+            try:
+                budget_tool.add_category("Credit Card Payment")
+            except Exception:
+                pass
+            budget_tool.add_transaction(
+                "Credit Card Payment", payment, "expense", f"Payment for {name}"
+            )
     return redirect(url_for("index"))
 
 
