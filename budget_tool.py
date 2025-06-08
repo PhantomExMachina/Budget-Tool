@@ -8,6 +8,11 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 
+try:
+    import auth
+except Exception:  # pragma: no cover - optional dependency
+    auth = None
+
 DEFAULT_DB = Path(__file__).with_name("budget.db")
 DB_FILE = Path(os.environ.get("BUDGET_DB", DEFAULT_DB))
 
@@ -26,7 +31,8 @@ def init_db():
     cur.execute(
         """CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL
+                username TEXT UNIQUE NOT NULL,
+                auth_uid TEXT UNIQUE
             )"""
     )
     cur.execute(
@@ -89,6 +95,35 @@ def add_user(username: str):
         print(f"User '{username}' already exists.")
     finally:
         conn.close()
+
+
+def login_user(id_token: str) -> str | None:
+    """Verify a Firebase ID token and record the user in the database."""
+    if auth is None:
+        print("Login failed: firebase_admin not available")
+        return None
+    try:
+        info = auth.verify_id_token(id_token)
+    except Exception as e:
+        print(f"Login failed: {e}")
+        return None
+    uid = info.get("uid")
+    phone = info.get("phone_number", uid)
+    conn = get_connection()
+    cur = conn.execute("SELECT username FROM users WHERE auth_uid=?", (uid,))
+    row = cur.fetchone()
+    if row:
+        username = row[0]
+    else:
+        username = phone
+        conn.execute(
+            "INSERT INTO users(username, auth_uid) VALUES(?, ?)",
+            (username, uid),
+        )
+        conn.commit()
+    conn.close()
+    print(f"Logged in as {username}")
+    return username
 
 
 def set_goal(category: str, amount: float, user: str = "default"):
@@ -333,6 +368,9 @@ def parse_args() -> argparse.Namespace:
 
     subparsers.add_parser("init", help="Initialize the database")
 
+    parser_login = subparsers.add_parser("login", help="Login with ID token")
+    parser_login.add_argument("token")
+
     parser_add_user = subparsers.add_parser("add-user", help="Add a user")
     parser_add_user.add_argument("username")
 
@@ -397,6 +435,9 @@ def main() -> None:
     if args.command == "init":
         init_db()
         print(f"Database initialized at {DB_FILE}")
+    elif args.command == "login":
+        init_db()
+        login_user(args.token)
     elif args.command == "add-user":
         init_db()
         add_user(args.username)

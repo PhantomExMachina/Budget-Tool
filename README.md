@@ -1,6 +1,6 @@
 # Budget Tool
 
-A simple command-line budgeting tool for tracking income and expenses. Data is stored locally using SQLite so it can be easily ported to Android or iOS later. The CLI now supports multiple users, budget goals and CSV export.
+A simple command-line budgeting tool for tracking income and expenses. Data is stored locally using SQLite so it can be easily ported to Android or iOS later. The CLI now supports multiple users, budget goals, CSV export and optional Firebase authentication.
 
 ## Features
 - Create budget categories (e.g. Groceries, Rent, Fun)
@@ -9,12 +9,14 @@ A simple command-line budgeting tool for tracking income and expenses. Data is s
 - View total income, total expenses and net balance
 - Manage multiple users and set per-category spending goals
 - Export transactions to CSV
+- Login via Firebase ID token
 
 ## Usage
 Run the CLI with Python 3:
 
 ```bash
 python3 budget_tool.py init                            # initialize the database
+python3 budget_tool.py login <id_token>               # verify Firebase token
 python3 budget_tool.py add-user <name>                 # add a user
 python3 budget_tool.py add-category <name>             # add a category
 python3 budget_tool.py add-income <category> <amount> [--user NAME] [-d DESC]
