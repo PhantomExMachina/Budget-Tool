@@ -118,6 +118,50 @@ def add_category(name: str):
         conn.close()
 
 
+def calc_totals(user: str = "default") -> tuple[float, float, float]:
+    """Return total income, expense and net for a user."""
+    conn = get_connection()
+    user_id = get_user_id(conn, user)
+    cur = conn.execute(
+        (
+            "SELECT type, SUM(amount) FROM transactions WHERE user_id=? "
+            "GROUP BY type"
+        ),
+        (user_id,),
+    )
+    totals = {row[0]: row[1] or 0 for row in cur.fetchall()}
+    conn.close()
+    income = totals.get("income", 0)
+    expense = totals.get("expense", 0)
+    return income, expense, income - expense
+
+
+def total_bank_balance() -> float:
+    """Return the sum of all bank account balances."""
+    conn = get_connection()
+    cur = conn.execute("SELECT balance FROM accounts WHERE type='Bank'")
+    total = sum(r[0] for r in cur.fetchall())
+    conn.close()
+    return total
+
+
+def bank_balance_after_months(months: int, user: str = "default") -> float:
+    """Estimate bank balance after given months using current net."""
+    _, _, net = calc_totals(user)
+    return total_bank_balance() + net * months
+
+
+def months_until_bank_negative(user: str = "default") -> int | None:
+    """Return months until bank balance drops below zero if net is negative."""
+    _, _, net = calc_totals(user)
+    if net >= 0:
+        return None
+    bank = total_bank_balance()
+    if bank <= 0:
+        return 0
+    return math.ceil(bank / -net)
+
+
 def delete_category(name: str) -> None:
     """Remove a category and any associated transactions."""
     conn = get_connection()
@@ -249,7 +293,7 @@ def months_to_payoff(
     if principal_payment <= balance * r:
         return None
     months = -math.log(1 - balance * r / principal_payment) / math.log(1 + r)
-    return int(months + 0.999)
+    return math.ceil(months)
 
 
 def login_user(id_token: str) -> str | None:
@@ -438,26 +482,16 @@ def category_balance(name: str, user: str = "default"):
 
 def show_totals(user: str = "default"):
     """Print overall income, expenses and net balance for the user."""
-    conn = get_connection()
-    user_id = get_user_id(conn, user)
-    cur = conn.execute(
-        (
-            "SELECT type, SUM(amount) FROM transactions WHERE user_id=? "
-            "GROUP BY type"
-        ),
-        (user_id,),
-    )
-    totals = {row[0]: row[1] or 0 for row in cur.fetchall()}
-    income = totals.get("income", 0)
-    expense = totals.get("expense", 0)
-    net = income - expense
+    income, expense, net = calc_totals(user)
     print(
         (
             f"Total Income: {income:.2f}\nTotal Expense: {expense:.2f}\n"
             f"Net Balance: {net:.2f} ({user})"
         )
     )
-    conn.close()
+    warn = months_until_bank_negative(user)
+    if warn is not None:
+        print(f"Bank account will be negative in about {warn} months.")
 
 
 def list_categories():
@@ -595,6 +629,11 @@ def parse_args() -> argparse.Namespace:
 
     subparsers.add_parser("list-accounts", help="List account balances")
 
+    parser_future = subparsers.add_parser(
+        "bank-balance", help="Estimate bank balance after N months"
+    )
+    parser_future.add_argument("months", type=int)
+
     parser_hist = subparsers.add_parser(
         "history", help="Show recent transactions"
     )
@@ -660,6 +699,12 @@ def main() -> None:
     elif args.command == "list-accounts":
         init_db()
         list_accounts()
+    elif args.command == "bank-balance":
+        init_db()
+        bal = bank_balance_after_months(args.months)
+        print(
+            f"Estimated bank balance after {args.months} months: {bal:.2f}"
+        )
     elif args.command == "delete-account":
         init_db()
         delete_account(args.name)

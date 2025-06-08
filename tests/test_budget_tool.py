@@ -113,3 +113,36 @@ def test_delete_account(tmp_path):
     run_cli(tmp_path, "delete-account", "Bank")
     after = run_cli(tmp_path, "list-accounts").stdout
     assert "Bank" not in after
+
+
+def test_bank_balance_projection(tmp_path):
+    run_cli(tmp_path, "init")
+    run_cli(tmp_path, "add-category", "Job")
+    run_cli(tmp_path, "add-income", "Job", "100")
+    import budget_tool
+    budget_tool.DB_FILE = tmp_path / "budget.db"
+    budget_tool.set_account("Bank", 1000, acct_type="Bank")
+    out = run_cli(tmp_path, "bank-balance", "3").stdout
+    assert "1300.00" in out
+
+
+def test_totals_negative_warning(tmp_path):
+    run_cli(tmp_path, "init")
+    run_cli(tmp_path, "add-category", "Job")
+    run_cli(tmp_path, "add-income", "Job", "100")
+    run_cli(tmp_path, "add-category", "Food")
+    run_cli(tmp_path, "add-expense", "Food", "150")
+    import budget_tool
+    budget_tool.DB_FILE = tmp_path / "budget.db"
+    budget_tool.set_account("Bank", 200, acct_type="Bank")
+    out = run_cli(tmp_path, "totals").stdout
+    assert "Net Balance: -50.00" in out
+    assert "negative in about 4 months" in out
+
+
+def test_months_to_payoff_interest(tmp_path):
+    run_cli(tmp_path, "init")
+    from budget_tool import months_to_payoff
+
+    assert months_to_payoff(1000, 100, 0) == 10
+    assert months_to_payoff(1000, 100, 20) > 10
