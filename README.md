@@ -19,6 +19,16 @@ python3 budget_tool.py add-expense <category> <amount> [-d DESCRIPTION]
 python3 budget_tool.py balance <category>   # show category balance
 python3 budget_tool.py totals               # show overall totals
 python3 budget_tool.py list                 # list all categories
+python3 budget_tool.py history [CATEGORY] [--limit N]  # show recent transactions
 ```
 
 The database file `budget.db` is created in the same directory as the script.
+
+## Running tests
+
+Install `pytest` and run the test suite:
+
+```bash
+pip install pytest
+pytest
+```
