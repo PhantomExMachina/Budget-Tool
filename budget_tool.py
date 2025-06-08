@@ -628,6 +628,13 @@ def parse_args() -> argparse.Namespace:
     parser_acc.add_argument("name")
     parser_acc.add_argument("balance", type=float)
     parser_acc.add_argument("--payment", type=float, default=0.0)
+    parser_acc.add_argument("--type", default="Other", help="Account type")
+    parser_acc.add_argument("--apr", type=float, default=0.0, help="APR percent")
+    parser_acc.add_argument("--escrow", type=float, default=0.0, help="Escrow")
+    parser_acc.add_argument(
+        "--insurance", type=float, default=0.0, help="Home/auto insurance"
+    )
+    parser_acc.add_argument("--tax", type=float, default=0.0, help="Property tax")
 
     parser_del_acc = subparsers.add_parser(
         "delete-account", help="Delete an account"
@@ -702,7 +709,16 @@ def main() -> None:
         list_transactions(args.category, args.limit, args.user)
     elif args.command == "set-account":
         init_db()
-        set_account(args.name, args.balance, args.payment)
+        set_account(
+            args.name,
+            args.balance,
+            args.payment,
+            args.type,
+            args.apr,
+            args.escrow,
+            args.insurance,
+            args.tax,
+        )
     elif args.command == "list-accounts":
         init_db()
         list_accounts()
