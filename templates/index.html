@@ -16,9 +16,14 @@
   </ul>
 
   <h2>Categories</h2>
-  <ul>
+  <ul class="list-unstyled">
   {% for cat in categories %}
-    <li>{{ cat }}</li>
+    <li class="mb-1">
+      {{ cat }}
+      <form method="post" action="{{ url_for('delete_category_route', name=cat) }}" style="display:inline">
+        <button class="btn btn-sm btn-danger">Delete</button>
+      </form>
+    </li>
   {% else %}
     <li>No categories</li>
   {% endfor %}
@@ -36,7 +41,10 @@
 
   <h3 class="mt-4">Add Transaction</h3>
   <form method="post" action="{{ url_for('add_transaction_route') }}" class="row gy-2 gx-3">
-    <div class="col-md-3">
+    <div class="col-md-2">
+      <input name="item_name" class="form-control" placeholder="Item name">
+    </div>
+    <div class="col-md-3 mt-md-0 mt-1">
       <select class="form-select" name="category">
         {% for cat in categories %}
         <option value="{{ cat }}">{{ cat }}</option>
@@ -56,10 +64,53 @@
       <input name="description" class="form-control" placeholder="Description">
     </div>
     <div class="col-md-2">
-      <input name="item_name" class="form-control" placeholder="Item name">
+      <button class="btn btn-success">Add</button>
+    </div>
+  </form>
+
+  <h3 class="mt-4">Accounts</h3>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Balance</th>
+        <th>Monthly Payment</th>
+        <th>Months Left</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for acc in accounts %}
+      <tr>
+        <td>{{ acc.name }}</td>
+        <td>{{ acc.balance }}</td>
+        <td>{{ acc.payment }}</td>
+        <td>{{ acc.months if acc.months is not none else 'n/a' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">No accounts</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h4>Add/Update Account</h4>
+  <form method="post" action="{{ url_for('set_account_route') }}" class="row gy-2 gx-3">
+    <div class="col-md-3">
+      <input name="name" class="form-control" placeholder="Account name" list="acct-names">
+      <datalist id="acct-names">
+        <option>Bank</option>
+        <option>Credit Card</option>
+        <option>Mortgage</option>
+        <option>Vehicle</option>
+      </datalist>
+    </div>
+    <div class="col-md-3">
+      <input type="number" step="0.01" name="balance" class="form-control" placeholder="Balance">
+    </div>
+    <div class="col-md-3">
+      <input type="number" step="0.01" name="payment" class="form-control" placeholder="Monthly Payment">
     </div>
     <div class="col-md-2">
-      <button class="btn btn-success">Add</button>
+      <button class="btn btn-secondary">Save</button>
     </div>
   </form>
 

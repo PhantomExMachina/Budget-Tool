@@ -21,6 +21,7 @@ def get_connection():
     """Return a SQLite connection using the configured database file."""
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
 
@@ -66,6 +67,14 @@ def init_db():
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )"""
     )
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS accounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                balance REAL NOT NULL,
+                monthly_payment REAL DEFAULT 0
+            )"""
+    )
     # add item_name column if upgrading from older DB
     cur.execute("PRAGMA table_info(transactions)")
     cols = [r[1] for r in cur.fetchall()]
@@ -90,6 +99,24 @@ def add_category(name: str):
         conn.close()
 
 
+def delete_category(name: str) -> None:
+    """Remove a category and any associated transactions."""
+    conn = get_connection()
+    try:
+        cur = conn.execute("SELECT id FROM categories WHERE name=?", (name,))
+        row = cur.fetchone()
+        if not row:
+            print(f"Category '{name}' not found.")
+            return
+        cat_id = row[0]
+        conn.execute("DELETE FROM transactions WHERE category_id=?", (cat_id,))
+        conn.execute("DELETE FROM categories WHERE id=?", (cat_id,))
+        conn.commit()
+        print(f"Category '{name}' deleted.")
+    finally:
+        conn.close()
+
+
 def add_user(username: str):
     """Create a new user account."""
     conn = get_connection()
@@ -101,6 +128,49 @@ def add_user(username: str):
         print(f"User '{username}' already exists.")
     finally:
         conn.close()
+
+
+def set_account(name: str, balance: float, payment: float = 0.0) -> None:
+    """Add or update an account balance and monthly payment."""
+    conn = get_connection()
+    conn.execute(
+        (
+            "INSERT INTO accounts(name, balance, monthly_payment) "
+            "VALUES(?,?,?) "
+            "ON CONFLICT(name) DO UPDATE SET balance=excluded.balance, "
+            "monthly_payment=excluded.monthly_payment"
+        ),
+        (name, balance, payment),
+    )
+    conn.commit()
+    conn.close()
+    print(f"Account '{name}' set to {balance:.2f} with payment {payment:.2f}")
+
+
+def list_accounts() -> None:
+    """Print all account balances and payoff estimates."""
+    conn = get_connection()
+    cur = conn.execute(
+        "SELECT name, balance, monthly_payment FROM accounts ORDER BY name"
+    )
+    rows = cur.fetchall()
+    conn.close()
+    print("Accounts:")
+    for row in rows:
+        months = months_to_payoff(row["balance"], row["monthly_payment"])
+        mtxt = f"{months}" if months is not None else "n/a"
+        print(
+            f"- {row['name']}: {row['balance']:.2f} (payment {row['monthly_payment']:.2f}, months {mtxt})"
+        )
+    if not rows:
+        print("(none)")
+
+
+def months_to_payoff(balance: float, payment: float) -> int | None:
+    """Return estimated months to pay off a balance."""
+    if payment > 0:
+        return int((balance + payment - 1) // payment)
+    return None
 
 
 def login_user(id_token: str) -> str | None:
@@ -388,6 +458,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser_add_cat.add_argument("name")
 
+    parser_del_cat = subparsers.add_parser(
+        "delete-category", help="Delete a category"
+    )
+    parser_del_cat.add_argument("name")
+
     parser_income = subparsers.add_parser(
         "add-income", help="Add income entry"
     )
@@ -427,6 +502,15 @@ def parse_args() -> argparse.Namespace:
     parser_export.add_argument("--output", default="transactions.csv")
     parser_export.add_argument("--user", default="default")
 
+    parser_acc = subparsers.add_parser(
+        "set-account", help="Add or update an account balance"
+    )
+    parser_acc.add_argument("name")
+    parser_acc.add_argument("balance", type=float)
+    parser_acc.add_argument("--payment", type=float, default=0.0)
+
+    subparsers.add_parser("list-accounts", help="List account balances")
+
     parser_hist = subparsers.add_parser(
         "history", help="Show recent transactions"
     )
@@ -455,6 +539,9 @@ def main() -> None:
     elif args.command == "add-category":
         init_db()
         add_category(args.name)
+    elif args.command == "delete-category":
+        init_db()
+        delete_category(args.name)
     elif args.command == "add-income":
         init_db()
         add_transaction(
@@ -483,6 +570,12 @@ def main() -> None:
     elif args.command == "history":
         init_db()
         list_transactions(args.category, args.limit, args.user)
+    elif args.command == "set-account":
+        init_db()
+        set_account(args.name, args.balance, args.payment)
+    elif args.command == "list-accounts":
+        init_db()
+        list_accounts()
     else:
         print("No command provided. Use -h for help.")
 
