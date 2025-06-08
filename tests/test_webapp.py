@@ -45,3 +45,29 @@ def test_update_accounts_delete(tmp_path):
     conn.close()
     assert names == ["A2"]
 
+
+def test_update_accounts_preserve_apr(tmp_path):
+    client = setup_app(tmp_path)
+    # create account with interest
+    budget_tool.set_account("Card", 800, 100, "Credit Card", apr=20)
+
+    data = {
+        "old_0": "Card",
+        "name_0": "Card",
+        "balance_0": "800",
+        "payment_0": "100",
+        "type_0": "Credit Card",
+    }
+
+    client.post("/update-accounts", data=data)
+
+    conn = budget_tool.get_connection()
+    cur = conn.execute("SELECT balance, monthly_payment, apr FROM accounts WHERE name=?", ("Card",))
+    row = cur.fetchone()
+    conn.close()
+
+    assert row["apr"] == 20
+    months = budget_tool.months_to_payoff(row["balance"], row["monthly_payment"], row["apr"])
+    months_no_interest = budget_tool.months_to_payoff(row["balance"], row["monthly_payment"], 0)
+    assert months > months_no_interest
+
