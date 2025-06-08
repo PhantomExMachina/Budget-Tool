@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link id="theme-link" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.1/dist/cyborg/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="font-link" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+  <link id="custom-theme-link" rel="stylesheet" href="{{ url_for('static', filename='style-dark.css') }}">
+  <title>Account Forecast</title>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('index') }}">Budget Tool</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('history') }}">History</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="{{ url_for('forecast_route') }}">Forecast</a>
+        </li>
+        <li class="nav-item d-flex align-items-center ms-3">
+          <select id="theme-select" class="form-select form-select-sm">
+            <option value="cyborg">Cyborg</option>
+            <option value="darkly">Darkly</option>
+            <option value="flatly">Flatly</option>
+            <option value="litera">Litera</option>
+            <option value="solar">Solar</option>
+          </select>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<div class="container mt-4">
+  <h1>Account Forecast</h1>
+  <form class="row gy-2 gx-3 mb-3">
+    <div class="col-auto">
+      <input type="number" class="form-control" name="months" value="{{ months }}" min="1">
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-secondary" type="submit">Update</button>
+    </div>
+  </form>
+  <h2>Accounts With Funds After {{ months }} {{ label }}</h2>
+  <table class="table table-bordered">
+    <thead><tr><th>Type</th><th>Name</th><th>Balance</th><th>Change</th></tr></thead>
+    <tbody>
+    {% for a in assets %}
+      <tr>
+        <td>{{ a.type }}</td><td>{{ a.name }}</td><td>{{ a.future|fmt }}</td>
+        <td>{{ a.change|fmt }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">No accounts</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <h2>Accounts With Money Owed After {{ months }} {{ label }}</h2>
+  <table class="table table-bordered">
+    <thead><tr><th>Type</th><th>Name</th><th>Balance</th><th>Change</th></tr></thead>
+    <tbody>
+    {% for d in debts %}
+      <tr>
+        <td>{{ d.type }}</td><td>{{ d.name }}</td><td>{{ d.future|fmt }}</td>
+        <td>{{ d.change|fmt }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">No accounts</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<script>
+const themes = {
+  cyborg: {mode:'dark',font:"'Orbitron', sans-serif",url:'https://fonts.googleapis.com/css2?family=Orbitron&display=swap'},
+  darkly: {mode:'dark',font:"'Share Tech Mono', monospace",url:'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'},
+  flatly: {mode:'light',font:"'Open Sans', sans-serif",url:'https://fonts.googleapis.com/css2?family=Open+Sans&display=swap'},
+  litera: {mode:'light',font:"'Lora', serif",url:'https://fonts.googleapis.com/css2?family=Lora&display=swap'},
+  solar: {mode:'light',font:"'Inconsolata', monospace",url:'https://fonts.googleapis.com/css2?family=Inconsolata&display=swap'}
+};
+const bootBase = 'https://cdn.jsdelivr.net/npm/bootswatch@5.3.1/dist/';
+const staticBase = '{{ url_for("static", filename="") }}';
+const themeSelect = document.getElementById('theme-select');
+function applyTheme(name) {
+  if (!themes[name]) name = 'cyborg';
+  document.getElementById('theme-link').href = `${bootBase}${name}/bootstrap.min.css`;
+  const styleFile = themes[name].mode === 'dark' ? 'style-dark.css' : 'style-light.css';
+  document.getElementById('custom-theme-link').href = `${staticBase}${styleFile}`;
+  document.getElementById('font-link').href = themes[name].url;
+  document.documentElement.style.setProperty('--app-font', themes[name].font);
+  localStorage.setItem('theme', name);
+  themeSelect.value = name;
+}
+themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('theme') || 'cyborg';
+  applyTheme(saved);
+});
+</script>
+</body>
+</html>

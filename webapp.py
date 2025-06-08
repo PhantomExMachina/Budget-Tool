@@ -102,6 +102,35 @@ def get_goals(user: str = "default"):
     return goals
 
 
+def get_account_forecast(months: int = 1):
+    """Return forecasted balances for assets and debts."""
+    rows = budget_tool.get_all_accounts()
+    assets: list[dict] = []
+    debts: list[dict] = []
+    for r in rows:
+        future = budget_tool.account_balance_after_months(
+            r["balance"],
+            r["monthly_payment"],
+            r["apr"],
+            r["escrow"],
+            r["insurance"],
+            r["tax"],
+            months,
+        )
+        change = future - r["balance"]
+        entry = {
+            "name": r["name"],
+            "type": r["type"],
+            "future": future,
+            "change": change,
+        }
+        if r["type"] in ("Bank", "Crypto Wallet", "Stock Account"):
+            assets.append(entry)
+        else:
+            debts.append(entry)
+    return assets, debts
+
+
 @app.route("/")
 def index():
     cats = get_categories()
@@ -123,6 +152,20 @@ def index():
         bank_warning=bank_warning,
         goals=goals,
         payment_warnings=warnings,
+    )
+
+
+@app.route("/forecast")
+def forecast_route():
+    months = request.args.get("months", default=1, type=int)
+    assets, debts = get_account_forecast(months)
+    label = "month" if months == 1 else "months"
+    return render_template(
+        "forecast.html",
+        assets=assets,
+        debts=debts,
+        months=months,
+        label=label,
     )
 
 

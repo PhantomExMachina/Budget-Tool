@@ -613,6 +613,47 @@ def show_totals(user: str = "default", months: int = 1):
             )
 
 
+def forecast_accounts(months: int = 1) -> None:
+    """Print forecasted balances for assets and liabilities."""
+    accounts = get_all_accounts()
+    if not accounts:
+        print("No accounts")
+        return
+
+    assets: list[str] = []
+    debts: list[str] = []
+    for row in accounts:
+        future = account_balance_after_months(
+            row["balance"],
+            row["monthly_payment"],
+            row["apr"],
+            row["escrow"],
+            row["insurance"],
+            row["tax"],
+            months,
+        )
+        change = future - row["balance"]
+        sign = "+" if change >= 0 else "-"
+        line = (
+            f"- {row['name']} ({row['type']}): {fmt(future)} "
+            f"({sign}{fmt(abs(change))})"
+        )
+        if row["type"] in ("Bank", "Crypto Wallet", "Stock Account"):
+            assets.append(line)
+        else:
+            debts.append(line)
+
+    label = "month" if months == 1 else "months"
+    if assets:
+        print(f"\nAccounts with funds after {months} {label}:")
+        for line in assets:
+            print(line)
+    if debts:
+        print(f"\nAccounts with money owed after {months} {label}:")
+        for line in debts:
+            print(line)
+
+
 def list_categories():
     """Print all available categories."""
     conn = get_connection()
@@ -758,6 +799,13 @@ def parse_args() -> argparse.Namespace:
 
     subparsers.add_parser("list-accounts", help="List account balances")
 
+    parser_forecast = subparsers.add_parser(
+        "forecast", help="Forecast account balances"
+    )
+    parser_forecast.add_argument(
+        "--months", type=int, default=1, help="Number of months to forecast"
+    )
+
     parser_future = subparsers.add_parser(
         "bank-balance", help="Estimate bank balance after N months"
     )
@@ -837,6 +885,9 @@ def main() -> None:
     elif args.command == "list-accounts":
         init_db()
         list_accounts()
+    elif args.command == "forecast":
+        init_db()
+        forecast_accounts(args.months)
     elif args.command == "bank-balance":
         init_db()
         bal = bank_balance_after_months(args.months)

@@ -71,3 +71,11 @@ def test_update_accounts_preserve_apr(tmp_path):
     months_no_interest = budget_tool.months_to_payoff(row["balance"], row["monthly_payment"], 0)
     assert months > months_no_interest
 
+
+def test_forecast_route(tmp_path):
+    client = setup_app(tmp_path)
+    budget_tool.set_account("Bank", 100, acct_type="Bank")
+    resp = client.get("/forecast")
+    assert resp.status_code == 200
+    assert b"Account Forecast" in resp.data
+
