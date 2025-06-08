@@ -121,6 +121,48 @@ def list_categories():
     conn.close()
 
 
+def list_transactions(category: str | None, limit: int):
+    """Display recent transactions, optionally filtered by category."""
+    conn = get_connection()
+    try:
+        if category:
+            cat_id = get_category_id(conn, category)
+            cur = conn.execute(
+                """
+                SELECT c.name, t.amount, t.type, t.description, t.created_at
+                FROM transactions t
+                JOIN categories c ON t.category_id = c.id
+                WHERE t.category_id = ?
+                ORDER BY t.created_at DESC
+                LIMIT ?
+                """,
+                (cat_id, limit),
+            )
+        else:
+            cur = conn.execute(
+                """
+                SELECT c.name, t.amount, t.type, t.description, t.created_at
+                FROM transactions t
+                JOIN categories c ON t.category_id = c.id
+                ORDER BY t.created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+        rows = cur.fetchall()
+        for row in rows:
+            desc = row[3] or ""
+            print(
+                f"{row[4]} | {row[0]} | {row[2]} | {row[1]:.2f} | {desc}"
+            )
+        if not rows:
+            print("(no transactions)")
+    except ValueError as e:
+        print(e)
+    finally:
+        conn.close()
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Budget Tool")
     subparsers = parser.add_subparsers(dest="command")
@@ -145,6 +187,12 @@ def parse_args():
 
     subparsers.add_parser("totals", help="Show overall totals")
     subparsers.add_parser("list", help="List categories")
+
+    parser_hist = subparsers.add_parser(
+        "history", help="Show recent transactions"
+    )
+    parser_hist.add_argument("category", nargs="?", default=None)
+    parser_hist.add_argument("--limit", type=int, default=10)
 
     return parser.parse_args()
 
@@ -172,6 +220,9 @@ def main():
     elif args.command == "list":
         init_db()
         list_categories()
+    elif args.command == "history":
+        init_db()
+        list_transactions(args.category, args.limit)
     else:
         print("No command provided. Use -h for help.")
 
