@@ -42,3 +42,14 @@ Install `pytest` and run the test suite:
 pip install pytest
 pytest
 ```
+
+## Web Interface
+
+A simple Flask web interface is provided for easier interaction. Install the requirements and run:
+
+```bash
+pip install -r requirements.txt
+python3 webapp.py
+```
+
+This launches a local web server at `http://127.0.0.1:5000/` where you can view totals, manage categories and add transactions using a basic Bootstrap UI.

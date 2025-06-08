@@ -12,3 +12,4 @@ license = {text = "MIT"}
 
 [project.scripts]
 budget-tool = "budget_tool:main"
+budget-web = "webapp:main"
