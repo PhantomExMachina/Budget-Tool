@@ -173,6 +173,12 @@ def set_account_route():
     return redirect(url_for("index"))
 
 
+@app.route("/delete-account/<name>", methods=["POST"])
+def delete_account_route(name: str):
+    budget_tool.delete_account(name)
+    return redirect(url_for("index"))
+
+
 @app.route("/history")
 def history():
     rows = get_history()

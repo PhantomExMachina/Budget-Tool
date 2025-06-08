@@ -28,6 +28,7 @@ python3 budget_tool.py totals [--user NAME]            # show overall totals
 python3 budget_tool.py list                            # list all categories
 python3 budget_tool.py delete-category <name>          # remove a category
 python3 budget_tool.py set-account <name> <balance> [--payment AMT]
+python3 budget_tool.py delete-account <name>           # remove an account
 python3 budget_tool.py list-accounts                   # show account balances
 python3 budget_tool.py history [CATEGORY] [--user NAME] [--limit N]
 python3 budget_tool.py --db mydata.db totals          # use a custom database
