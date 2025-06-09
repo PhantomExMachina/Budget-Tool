@@ -14,13 +14,14 @@ A simple command-line budgeting tool for tracking income and expenses. Data is s
 - Automatically detect recurring expenses from uploaded statements
 - Store recurring charges as monthly expenses
 - Login via Firebase ID token
+  - Authentication is disabled by default; set `AUTH_ENABLED=1` to enable
 
 ## Usage
 Run the CLI with Python 3:
 
 ```bash
 python3 budget_tool.py init                            # initialize the database
-python3 budget_tool.py login <id_token>               # verify Firebase token
+AUTH_ENABLED=1 python3 budget_tool.py login <id_token> # verify Firebase token
 python3 budget_tool.py add-user <name>                 # add a user
 python3 budget_tool.py add-category <name>             # add a category
 python3 budget_tool.py add-income <category> <amount> [--user NAME] [-d DESC]

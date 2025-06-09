@@ -22,6 +22,7 @@ try:
     import auth
 except Exception:  # pragma: no cover - optional dependency
     auth = None
+AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "0") == "1"
 
 DEFAULT_DB = Path(__file__).with_name("budget.db")
 DB_FILE = Path(os.environ.get("BUDGET_DB", DEFAULT_DB))
@@ -621,6 +622,9 @@ def months_to_payoff(
 
 def login_user(id_token: str) -> str | None:
     """Verify a Firebase ID token and record the user in the database."""
+    if not AUTH_ENABLED:
+        print("Authentication disabled; using default user")
+        return "default"
     if auth is None:
         print("Login failed: firebase_admin not available")
         return None
