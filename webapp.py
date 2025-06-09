@@ -12,9 +12,11 @@ from flask import (
     Response,
     session,
 )
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devkey")
+csrf = CSRFProtect(app)
 AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "0") == "1"
 
 
