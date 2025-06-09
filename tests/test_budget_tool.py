@@ -209,10 +209,12 @@ def test_parse_statement_csv(tmp_path):
     assert len(records) == 2
     assert records[0].description == "Gym"
     assert records[0].amount == 10
+    assert records[0].category is None
 
 
 def test_parse_statement_csv_posting_date(tmp_path):
-    csv_text = "Posting Date,Description,Amount\n2023-01-01,Coffee,5"
+    csv_text = "Posting Date,Description,Amount,Transaction Category\n" \
+        "2023-01-01,Coffee,5,Drinks"
     f = tmp_path / "s2.csv"
     f.write_text(csv_text)
     from budget_tool import parse_statement_csv
@@ -222,6 +224,7 @@ def test_parse_statement_csv_posting_date(tmp_path):
     assert records[0].description == "Coffee"
     assert records[0].amount == 5
     assert records[0].date == datetime(2023, 1, 1)
+    assert records[0].category == "Drinks"
 
 
 def test_parse_statement_csv_tab_delimited(tmp_path):
@@ -248,6 +251,20 @@ def test_parse_statement_csv_date_formats(tmp_path):
     assert len(records) == 2
     assert records[0].date == datetime(2023, 1, 2)
     assert records[1].date == datetime(2023, 1, 3)
+
+
+def test_parse_statement_csv_category_detection(tmp_path):
+    csv_text = (
+        "date,description,amount,category\n"
+        "2023-01-01,Gym,10,Health"
+    )
+    f = tmp_path / "cat.csv"
+    f.write_text(csv_text)
+    from budget_tool import parse_statement_csv
+
+    records = parse_statement_csv(f)
+    assert len(records) == 1
+    assert records[0].category == "Health"
 
 
 def test_find_recurring_expenses():

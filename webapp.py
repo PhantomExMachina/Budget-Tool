@@ -321,8 +321,8 @@ def auto_scan():
             statements.append(budget_tool.parse_statement_csv(data))
         found = budget_tool.find_recurring_expenses(statements, day_window=2)
         existing = {d for d, _ in budget_tool.get_monthly_expenses()}
-        results = [(d, a) for d, a in found if d not in existing]
-        recurring_names = {d for d, _ in found}
+        results = [(d, a, c) for d, a, c in found if d not in existing]
+        recurring_names = {d for d, _, _ in found}
         for month in statements:
             for r in month:
                 if r.amount < 0 and r.description not in recurring_names and r.description not in existing:
@@ -334,8 +334,9 @@ def auto_scan():
             if desc is None:
                 break
             amt = request.form.get(f"amt_{i}", type=float)
+            cat = request.form.get(f"cat_{i}") or "Misc"
             if request.form.get(f"add_{i}") == "on":
-                budget_tool.add_monthly_expense(desc, amt)
+                budget_tool.add_monthly_expense(desc, amt, cat)
             i += 1
         results = []
     expenses = budget_tool.get_monthly_expenses()

@@ -35,6 +35,7 @@ class TransactionRecord:
     date: datetime
     description: str
     amount: float
+    category: str | None = None
 
 
 def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
@@ -68,6 +69,12 @@ def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
     header = [c.lower().strip() for c in rows[0]]
     has_header = "amount" in header and "description" in header
     start = 1 if has_header else 0
+    category_key = None
+    if has_header:
+        for h in header:
+            if "category" in h:
+                category_key = h
+                break
 
     records: list[TransactionRecord] = []
     for row in rows[start:]:
@@ -91,8 +98,10 @@ def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
                 date_str = row[0]
             desc = mapping.get("description", row[1])
             amt_str = mapping.get("amount", row[2])
+            category = mapping.get(category_key) if category_key else None
         else:
             date_str, desc, amt_str = row[0], row[1], row[2]
+            category = None
         dt = None
         for fmt in [
             lambda s: datetime.fromisoformat(s),
@@ -108,7 +117,8 @@ def parse_statement_csv(path_or_file) -> list[TransactionRecord]:
         if dt is None:
             continue
         amt = float(amt_str.replace("$", "").replace(",", ""))
-        records.append(TransactionRecord(dt, desc.strip(), amt))
+        category = category.strip() if isinstance(category, str) else None
+        records.append(TransactionRecord(dt, desc.strip(), amt, category))
     return records
 
 
@@ -116,7 +126,7 @@ def find_recurring_expenses(
     statements: Sequence[Sequence[TransactionRecord]],
     tolerance: float = 0.1,
     day_window: int = 0,
-) -> list[tuple[str, float]]:
+) -> list[tuple[str, float, str | None]]:
     """Return charges that repeat monthly with similar amount and day.
 
     Parameters
@@ -134,7 +144,7 @@ def find_recurring_expenses(
 
     # start with the first month's transactions and look for matches
     first_month = statements[0]
-    recurring: list[tuple[str, float]] = []
+    recurring: list[tuple[str, float, str | None]] = []
     seen: set[tuple[str, int]] = set()
 
     for base in first_month:
@@ -159,7 +169,7 @@ def find_recurring_expenses(
             amounts.append(match_amt)
         else:  # only executed if no break occurred -> found in all months
             avg = sum(amounts) / len(amounts)
-            recurring.append((base.description, abs(avg)))
+            recurring.append((base.description, abs(avg), base.category))
 
     return recurring
 
