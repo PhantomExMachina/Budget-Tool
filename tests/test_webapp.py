@@ -174,6 +174,39 @@ def test_delete_one_time(tmp_path, monkeypatch):
     assert budget_tool.get_one_time_expenses() == []
 
 
+def test_auto_scan_ignore_duplicates(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    login(client, monkeypatch)
+    data1 = b"date,description,amount\n2023-01-01,Item,-5\n"
+    data2 = b"date,description,amount\n2023-02-01,Other,-2\n"
+    token = get_csrf(client, "/auto-scan")
+    client.post(
+        "/auto-scan",
+        data={
+            "statement": [
+                (io.BytesIO(data1), "jan.csv"),
+                (io.BytesIO(data2), "feb.csv"),
+            ],
+            "csrf_token": token,
+        },
+        content_type="multipart/form-data",
+    )
+    token = get_csrf(client, "/auto-scan")
+    client.post(
+        "/auto-scan",
+        data={
+            "statement": [
+                (io.BytesIO(data1), "jan.csv"),
+                (io.BytesIO(data2), "feb.csv"),
+            ],
+            "csrf_token": token,
+        },
+        content_type="multipart/form-data",
+    )
+    rows = [r for r in budget_tool.get_one_time_expenses() if r[1] == "Item"]
+    assert len(rows) == 1
+
+
 def test_nav_contains_auto_scan(tmp_path):
     client = setup_app(tmp_path)
     resp = client.get("/")
@@ -207,6 +240,20 @@ def test_delete_monthly_expense(tmp_path):
     )
     assert cur.fetchone()[0] == 0
     conn.close()
+
+
+def test_delete_monthly_multiple(tmp_path):
+    client = setup_app(tmp_path)
+    budget_tool.add_category("Misc")
+    budget_tool.add_monthly_expense("Gym", 10)
+    budget_tool.add_monthly_expense("Net", 20)
+    token = get_csrf(client, "/auto-scan")
+    resp = client.post(
+        "/delete-monthly",
+        data={"delete": ["Gym", "Net"], "csrf_token": token},
+    )
+    assert resp.status_code == 302
+    assert budget_tool.get_monthly_expenses() == []
 
 
 def test_monthly_expense_creates_transaction(tmp_path):
