@@ -2,6 +2,12 @@ body {
     font-family: var(--app-font, 'Orbitron', sans-serif);
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 50%, #e9ecef 100%);
     color: #212529;
+    animation: fade-in 0.5s ease-in;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 h1, h2, h3 {
@@ -32,6 +38,15 @@ h1, h2, h3 {
     border-color: #dc3545;
 }
 
+.btn {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
 a, a:hover {
     color: #007bff;
 }
@@ -48,4 +63,12 @@ a, a:hover {
 
 .sidebar a:hover {
     background-color: rgba(0, 0, 0, 0.05);
+}
+
+.card {
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
 }

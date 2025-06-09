@@ -47,13 +47,20 @@ new Chart(document.getElementById('catChart').getContext('2d'), {
     labels: catData.map(r => r[0]),
     datasets: [{label: 'Spent', data: catData.map(r => r[1]), backgroundColor: '#007bff'}]
   },
-  options: {plugins: {legend: {display: false}}}
+  options: {
+    plugins: {legend: {display: false}, tooltip: {enabled: true}},
+    animation: {duration: 700}
+  }
 });
 new Chart(document.getElementById('acctChart').getContext('2d'), {
   type: 'pie',
   data: {
     labels: acctData.map(r => r[0]),
     datasets: [{data: acctData.map(r => r[1])}]
+  },
+  options: {
+    plugins: {tooltip: {enabled: true}},
+    animation: {duration: 700}
   }
 });
 </script>
