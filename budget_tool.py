@@ -605,13 +605,21 @@ def delete_monthly_income(desc: str) -> None:
 
 def add_one_time_expense(desc: str, amount: float, created_at: datetime) -> None:
     """Store a non-recurring expense record."""
+    date_part = created_at.date().isoformat()
     conn = get_connection()
-    conn.execute(
-        "INSERT OR IGNORE INTO one_time_expenses("
-        "description, amount, created_at) VALUES(?,?,?)",
-        (desc, abs(amount), created_at.isoformat()),
+    cur = conn.execute(
+        "SELECT 1 FROM one_time_expenses WHERE description=? AND amount=? "
+        "AND substr(created_at,1,10)=?",
+        (desc, abs(amount), date_part),
     )
-    conn.commit()
+    exists = cur.fetchone() is not None
+    if not exists:
+        conn.execute(
+            "INSERT OR IGNORE INTO one_time_expenses("  # avoid duplicates
+            "description, amount, created_at) VALUES(?,?,?)",
+            (desc, abs(amount), created_at.isoformat()),
+        )
+        conn.commit()
     conn.close()
 
 

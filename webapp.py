@@ -341,13 +341,29 @@ def auto_scan():
     expenses = budget_tool.get_monthly_expenses()
     ones = budget_tool.get_one_time_expenses()
     one_total = budget_tool.one_time_total()
+    from collections import defaultdict
+    from datetime import datetime
+    grouped: dict[str, list[tuple[int, str, float, str]]] = defaultdict(list)
+    month_totals: dict[str, float] = defaultdict(float)
+    for oid, desc, amt, dt in ones:
+        key = dt[:7]
+        grouped[key].append((oid, desc, amt, dt))
+        month_totals[key] += amt
+    month_list = []
+    chart = []
+    for key in sorted(grouped.keys(), reverse=True):
+        label = datetime.strptime(key, "%Y-%m").strftime("%B %Y")
+        total = month_totals[key]
+        month_list.append({"key": key, "label": label, "items": grouped[key], "total": total})
+        chart.append((label, total))
     return render_template(
         "auto_scan.html",
         results=results or [],
         categories=cats,
         monthly_expenses=expenses,
-        one_time_expenses=ones,
+        one_time_expenses=month_list,
         one_time_total=one_total,
+        one_time_chart=chart,
     )  # noqa: E501
 
 
@@ -355,6 +371,14 @@ def auto_scan():
 def delete_monthly_expense_route(desc: str):
     """Remove a saved monthly expense and related transactions."""
     budget_tool.delete_monthly_expense(desc)
+    return redirect(url_for("auto_scan"))
+
+
+@app.route("/delete-monthly", methods=["POST"])
+def delete_monthly_multiple():
+    """Delete multiple monthly expenses selected via checkboxes."""
+    for desc in request.form.getlist("delete"):
+        budget_tool.delete_monthly_expense(desc)
     return redirect(url_for("auto_scan"))
 
 
