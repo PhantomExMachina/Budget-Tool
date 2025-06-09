@@ -325,7 +325,7 @@ def auto_scan():
         recurring_names = {d for d, _ in found}
         for month in statements:
             for r in month:
-                if r.amount > 0 and r.description not in recurring_names and r.description not in existing:
+                if r.amount < 0 and r.description not in recurring_names and r.description not in existing:
                     budget_tool.add_one_time_expense(r.description, r.amount, r.date)
     elif request.method == "POST":
         i = 0
