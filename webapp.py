@@ -1,14 +1,36 @@
 import io
 import budget_tool
-from flask import Flask, render_template, request, redirect, url_for, Response
+import os
+from functools import wraps
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    Response,
+    session,
+)
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devkey")
 
 
 @app.template_filter("fmt")
 def fmt_filter(value: float) -> str:
     """Jinja filter to format numbers with commas and two decimals."""
     return budget_tool.fmt(value)
+
+
+def require_login(func):
+    """Decorator to ensure a user is logged in."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not session.get("user"):
+            return redirect(url_for("login"))
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 def setup_db() -> None:
@@ -78,21 +100,29 @@ def get_asset_accounts():
     ]
 
 
-def get_history(limit: int = 50, user: str = "default"):
+def get_history(
+    limit: int = 50,
+    user: str = "default",
+    start: str | None = None,
+    end: str | None = None,
+):
     conn = budget_tool.get_connection()
     user_id = budget_tool.get_user_id(conn, user)
-    cur = conn.execute(
-        """
-        SELECT t.id, c.name, t.amount, t.type, t.description,
-               t.item_name, t.created_at
-        FROM transactions t
-        JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = ?
-        ORDER BY t.created_at DESC
-        LIMIT ?
-        """,
-        (user_id, limit),
+    query = (
+        "SELECT t.id, c.name, t.amount, t.type, t.description, "
+        "t.item_name, t.created_at FROM transactions t "
+        "JOIN categories c ON t.category_id = c.id WHERE t.user_id = ?"
     )
+    params = [user_id]
+    if start:
+        query += " AND t.created_at >= ?"
+        params.append(start)
+    if end:
+        query += " AND t.created_at <= ?"
+        params.append(end)
+    query += " ORDER BY t.created_at DESC LIMIT ?"
+    params.append(limit)
+    cur = conn.execute(query, params)
     rows = cur.fetchall()
     conn.close()
     return rows
@@ -155,6 +185,25 @@ def get_account_forecast(months: int = 1):
     return assets, debts
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        token = request.form.get("token", "")
+        username = budget_tool.login_user(token)
+        if username:
+            session["user"] = username
+            return redirect(url_for("overview"))
+        error = "Login failed"
+    return render_template("login.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("login"))
+
+
 @app.route("/")
 def overview():
     income, expense, net = get_totals()
@@ -171,6 +220,7 @@ def overview():
 
 
 @app.route("/manage")
+@require_login
 def manage():
     cats = get_categories()
     income, expense, net = get_totals()
@@ -179,6 +229,7 @@ def manage():
     total_assets = budget_tool.total_asset_balance()
     bank_warning = budget_tool.months_until_bank_negative()
     goals = get_goals()
+    incomes = budget_tool.get_monthly_incomes()
     return render_template(
         "manage.html",
         categories=cats,
@@ -190,11 +241,13 @@ def manage():
         total_assets=total_assets,
         bank_warning=bank_warning,
         goals=goals,
+        monthly_incomes=incomes,
         payment_warnings=warnings,
     )
 
 
 @app.route("/forecast")
+@require_login
 def forecast_route():
     months = request.args.get("months", default=1, type=int)
     assets, debts = get_account_forecast(months)
@@ -209,6 +262,7 @@ def forecast_route():
 
 
 @app.route("/auto-scan", methods=["GET", "POST"])
+@require_login
 def auto_scan():
     """Scan uploaded statements for recurring expenses."""
     results = None
@@ -246,6 +300,24 @@ def delete_monthly_expense_route(desc: str):
     """Remove a saved monthly expense and related transactions."""
     budget_tool.delete_monthly_expense(desc)
     return redirect(url_for("auto_scan"))
+
+
+@app.route("/add-monthly-income", methods=["POST"])
+@require_login
+def add_monthly_income_route():
+    desc = request.form.get("desc")
+    amount = request.form.get("amount", type=float)
+    category = request.form.get("category", "Misc")
+    if desc and amount is not None:
+        budget_tool.add_monthly_income(desc, amount, category)
+    return redirect(url_for("manage"))
+
+
+@app.route("/delete-monthly-income/<path:desc>", methods=["POST"])
+@require_login
+def delete_monthly_income_route(desc: str):
+    budget_tool.delete_monthly_income(desc)
+    return redirect(url_for("manage"))
 
 
 @app.route("/add-category", methods=["POST"])
@@ -372,8 +444,11 @@ def delete_account_route(name: str):
 
 
 @app.route("/history")
+@require_login
 def history():
-    rows = get_history()
+    start = request.args.get("start")
+    end = request.args.get("end")
+    rows = get_history(start=start, end=end)
     return render_template("history.html", rows=rows)
 
 

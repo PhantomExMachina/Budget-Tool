@@ -303,3 +303,25 @@ def test_add_monthly_expense_abs(tmp_path):
     conn.close()
     assert amt == 20
 
+
+def test_monthly_income_functions(tmp_path):
+    import budget_tool
+
+    budget_tool.DB_FILE = tmp_path / "budget.db"
+    budget_tool.init_db()
+    budget_tool.add_category("Job")
+    budget_tool.add_monthly_income("Salary", 100, "Job")
+
+    conn = budget_tool.get_connection()
+    cur = conn.execute(
+        "SELECT count(*) FROM monthly_incomes WHERE description=?",
+        ("Salary",),
+    )
+    assert cur.fetchone()[0] == 1
+    cur = conn.execute(
+        "SELECT count(*) FROM transactions WHERE description=?",
+        ("Salary",),
+    )
+    assert cur.fetchone()[0] == 1
+    conn.close()
+

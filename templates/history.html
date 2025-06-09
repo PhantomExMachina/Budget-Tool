@@ -42,12 +42,30 @@
             <option value="solar">Solar</option>
           </select>
         </li>
+        <li class="nav-item">
+          {% if session.get('user') %}
+          <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+          {% else %}
+          <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+          {% endif %}
+        </li>
       </ul>
     </div>
   </div>
 </nav>
 <div class="container mt-4">
   <h1>Transaction History</h1>
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-auto">
+      <input type="date" name="start" class="form-control" value="{{ request.args.get('start', '') }}">
+    </div>
+    <div class="col-auto">
+      <input type="date" name="end" class="form-control" value="{{ request.args.get('end', '') }}">
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-secondary">Filter</button>
+    </div>
+  </form>
   <table class="table table-striped">
     <thead>
       <tr>

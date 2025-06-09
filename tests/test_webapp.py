@@ -14,6 +14,11 @@ def setup_app(tmp_path):
     return webapp.app.test_client()
 
 
+def login(client, monkeypatch):
+    monkeypatch.setattr(budget_tool, "login_user", lambda t: "tester")
+    client.post("/login", data={"token": "x"})
+
+
 def get_account_names(conn):
     cur = conn.execute("SELECT name FROM accounts ORDER BY name")
     return [r[0] for r in cur.fetchall()]
@@ -73,16 +78,18 @@ def test_update_accounts_preserve_apr(tmp_path):
     assert months > months_no_interest
 
 
-def test_forecast_route(tmp_path):
+def test_forecast_route(tmp_path, monkeypatch):
     client = setup_app(tmp_path)
     budget_tool.set_account("Bank", 100, acct_type="Bank")
+    login(client, monkeypatch)
     resp = client.get("/forecast")
     assert resp.status_code == 200
     assert b"Account Forecast" in resp.data
 
 
-def test_auto_scan_route(tmp_path):
+def test_auto_scan_route(tmp_path, monkeypatch):
     client = setup_app(tmp_path)
+    login(client, monkeypatch)
     data1 = b"date,description,amount\n2023-01-01,Gym,10\n"
     data2 = b"date,description,amount\n2023-02-01,Gym,10\n"
     def build_data():
@@ -110,6 +117,13 @@ def test_nav_contains_auto_scan(tmp_path):
     resp = client.get("/")
     assert resp.status_code == 200
     assert b"/auto-scan" in resp.data
+
+
+def test_protected_requires_login(tmp_path):
+    client = setup_app(tmp_path)
+    resp = client.get("/manage")
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/login")
 
 
 def test_delete_monthly_expense(tmp_path):
@@ -166,4 +180,49 @@ def test_delete_transaction_removes_monthly(tmp_path):
     )
     assert cur.fetchone()[0] == 0
     conn.close()
+
+
+def test_monthly_income_routes(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    budget_tool.add_category("Job")
+    login(client, monkeypatch)
+    client.post(
+        "/add-monthly-income",
+        data={"desc": "Salary", "amount": "50", "category": "Job"},
+    )
+    resp = client.get("/manage")
+    assert b"Salary" in resp.data
+    client.post("/delete-monthly-income/Salary")
+    resp2 = client.get("/manage")
+    assert b"Salary" not in resp2.data
+
+
+def test_history_date_filter(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    budget_tool.add_category("Misc")
+    budget_tool.add_transaction("Misc", 5, "expense", "old")
+    budget_tool.add_transaction("Misc", 5, "expense", "new")
+    conn = budget_tool.get_connection()
+    cur = conn.execute(
+        "SELECT id FROM transactions WHERE description='old'"
+    )
+    old_id = cur.fetchone()["id"]
+    cur = conn.execute(
+        "SELECT id FROM transactions WHERE description='new'"
+    )
+    new_id = cur.fetchone()["id"]
+    conn.execute(
+        "UPDATE transactions SET created_at='2023-01-01' WHERE id=?",
+        (old_id,),
+    )
+    conn.execute(
+        "UPDATE transactions SET created_at='2023-02-01' WHERE id=?",
+        (new_id,),
+    )
+    conn.commit()
+    conn.close()
+    login(client, monkeypatch)
+    resp = client.get("/history?start=2023-01-15&end=2023-02-28")
+    assert b"new" in resp.data
+    assert b"old" not in resp.data
 
