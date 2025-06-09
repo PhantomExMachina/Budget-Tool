@@ -10,6 +10,7 @@ def fmt_filter(value: float) -> str:
     """Jinja filter to format numbers with commas and two decimals."""
     return budget_tool.fmt(value)
 
+
 def setup_db() -> None:
     """Initialize the database tables if they do not exist."""
     budget_tool.init_db()
@@ -82,7 +83,8 @@ def get_history(limit: int = 50, user: str = "default"):
     user_id = budget_tool.get_user_id(conn, user)
     cur = conn.execute(
         """
-        SELECT t.id, c.name, t.amount, t.type, t.description, t.item_name, t.created_at
+        SELECT t.id, c.name, t.amount, t.type, t.description,
+               t.item_name, t.created_at
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
         WHERE t.user_id = ?
@@ -102,7 +104,8 @@ def get_expenses(limit: int = 50, user: str = "default"):
     user_id = budget_tool.get_user_id(conn, user)
     cur = conn.execute(
         """
-        SELECT t.id, c.name, t.amount, t.type, t.description, t.item_name, t.created_at
+        SELECT t.id, c.name, t.amount, t.type, t.description,
+               t.item_name, t.created_at
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
         WHERE t.user_id = ? AND t.type='expense'
@@ -234,7 +237,7 @@ def auto_scan():
         results = []
     expenses = budget_tool.get_monthly_expenses()
     return render_template(
-        "auto_scan.html", results=results or [], categories=cats, monthly_expenses=expenses
+        "auto_scan.html", results=results or [], categories=cats, monthly_expenses=expenses  # noqa: E501
     )
 
 
@@ -296,7 +299,7 @@ def update_accounts_route():
             # Preserve APR and other fields not included in the edit table
             conn = budget_tool.get_connection()
             cur = conn.execute(
-                "SELECT apr, escrow, insurance, tax FROM accounts WHERE name=?",
+                "SELECT apr, escrow, insurance, tax FROM accounts WHERE name=?",  # noqa: E501
                 (old,),
             )
             row = cur.fetchone()
@@ -357,7 +360,7 @@ def set_account_route():
             except Exception:
                 pass
             budget_tool.add_transaction(
-                "Credit Card Payment", payment, "expense", f"Payment for {name}"
+                "Credit Card Payment", payment, "expense", f"Payment for {name}"  # noqa: E501
             )
     return redirect(url_for("manage"))
 
@@ -377,7 +380,7 @@ def history():
 @app.route("/delete/<int:tid>", methods=["POST"])
 def delete_transaction(tid: int):
     conn = budget_tool.get_connection()
-    cur = conn.execute("SELECT description FROM transactions WHERE id=?", (tid,))
+    cur = conn.execute("SELECT description FROM transactions WHERE id=?", (tid,))  # noqa: E501
     row = cur.fetchone()
     desc = row["description"] if row else None
     conn.execute("DELETE FROM transactions WHERE id=?", (tid,))
@@ -392,7 +395,7 @@ def delete_transaction(tid: int):
 def export_csv_route():
     data = budget_tool.export_csv_string()
     resp = Response(data, mimetype="text/csv")
-    resp.headers["Content-Disposition"] = "attachment; filename=transactions.csv"
+    resp.headers["Content-Disposition"] = "attachment; filename=transactions.csv"  # noqa: E501
     return resp
 
 
