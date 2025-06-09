@@ -675,10 +675,9 @@ def get_goal_status(user: str = "default") -> list[tuple[str, float, float]]:
     cur = conn.execute(
         """
         SELECT c.name, g.amount,
-            (SELECT SUM(t.amount) FROM transactions t
-             WHERE t.category_id = c.id AND t.user_id=? AND t.type='expense') as spent  # noqa: E501
+               (SELECT SUM(t.amount) FROM transactions t
+                WHERE t.category_id = c.id AND t.user_id=? AND t.type='expense') AS spent
         FROM goals g
-        FROM transactions t
         JOIN categories c ON g.category_id = c.id
         WHERE g.user_id=?
         ORDER BY c.name
