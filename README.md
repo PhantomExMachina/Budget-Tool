@@ -86,4 +86,4 @@ secure random value when deploying. Firebase authentication also requires the
 
 ### Supported statement formats
 
-Uploaded CSV statements may be comma or tab delimited. The parser will automatically detect the delimiter. Dates may be in ISO format (`YYYY-MM-DD`), compact form (`YYYYMMDD`) or U.S. style (`MM/DD/YYYY`). The first row should include `Date`, `Description` and `Amount` columns.
+Uploaded CSV statements may be comma or tab delimited. The parser will automatically detect the delimiter. Dates may be in ISO format (`YYYY-MM-DD`), compact form (`YYYYMMDD`) or U.S. style (`MM/DD/YYYY`). The first row should include `Date`, `Description` and `Amount` columns. If a column containing the word `Category` (e.g. `Transaction Category`) is present it will be used to assign categories when saving monthly expenses.
