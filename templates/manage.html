@@ -1,7 +1,42 @@
 {% extends 'layout.html' %}
 {% block content %}
-  <h1>Budget Tool</h1>
+  <h1>Manage</h1>
+  <div class="row text-center mb-4">
+    <div class="col-md-3 mb-2">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <h5 class="card-title">Income</h5>
+          <p class="card-text">{{ income|fmt }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-2">
+      <div class="card bg-danger text-white">
+        <div class="card-body">
+          <h5 class="card-title">Expense</h5>
+          <p class="card-text">{{ expense|fmt }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-2">
+      <div class="card bg-primary text-white">
+        <div class="card-body">
+          <h5 class="card-title">Net</h5>
+          <p class="card-text">{{ net|fmt }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-2">
+      <div class="card bg-secondary text-white">
+        <div class="card-body">
+          <h5 class="card-title">Assets</h5>
+          <p class="card-text">{{ total_assets|fmt }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
   <h2>Accounts With Funds</h2>
+  <div class="table-responsive">
   <table class="table table-bordered">
     <thead>
       <tr>
@@ -22,13 +57,7 @@
     {% endfor %}
     </tbody>
   </table>
-  <h2>Totals</h2>
-  <ul>
-    <li>Income: {{ income|fmt }}</li>
-    <li>Expense: {{ expense|fmt }}</li>
-    <li>Net Balance: {{ net|fmt }}</li>
-    <li>Total Assets: {{ total_assets|fmt }}</li>
-  </ul>
+  </div>
   {% if bank_warning is not none %}
   <div class="alert alert-warning" role="alert">
     Bank account will be negative in about {{ bank_warning }} months.
@@ -36,25 +65,7 @@
   {% endif %}
   <a class="btn btn-secondary mb-3" href="{{ url_for('export_csv_route') }}">Export CSV</a>
 
-  <h2 class="d-flex align-items-center">Categories <button id="edit-cats" class="btn btn-sm btn-secondary ms-2">Edit</button></h2>
-  <form method="post" action="{{ url_for('update_categories_route') }}" id="cats-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <ul class="list-unstyled" id="cats-list">
-    {% for cat in categories %}
-      <li class="mb-2 d-flex align-items-center">
-        <input type="checkbox" name="delete" value="{{ cat }}" class="form-check-input shadow-sm me-2 edit-check d-none">
-        <input type="text" name="name_{{ loop.index0 }}" value="{{ cat }}" class="form-control-plaintext flex-grow-1 edit-name" readonly>
-        <input type="hidden" name="old_{{ loop.index0 }}" value="{{ cat }}">
-      </li>
-    {% else %}
-      <li>No categories</li>
-    {% endfor %}
-    </ul>
-    <div class="mt-2 d-none" id="cat-actions">
-      <button name="action" value="delete" class="btn btn-danger me-2">Delete</button>
-      <button name="action" value="save" class="btn btn-primary">Save</button>
-    </div>
-  </form>
+  <h2>Categories <button class="btn btn-sm btn-secondary" id="openCats">Edit</button></h2>
 
   <h3>Add Category</h3>
   <form method="post" action="{{ url_for('add_category_route') }}" class="row g-2">
@@ -66,6 +77,93 @@
       <button class="btn btn-primary">Add</button>
     </div>
   </form>
+
+  <!-- Accounts Modal -->
+  <div class="modal fade" id="accountsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Accounts</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form method="post" action="{{ url_for('update_accounts_route') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="table-responsive">
+            <table class="table table-bordered">
+              <thead>
+                <tr><th>Type</th><th>Name</th><th>Balance</th><th>Payment</th><th>Months</th><th>Delete</th></tr>
+              </thead>
+              <tbody>
+              {% for acc in accounts %}
+                <tr>
+                  <td>
+                    <select name="type_{{ loop.index0 }}" class="form-select form-select-sm">
+                      <option {% if acc.type == 'Bank' %}selected{% endif %}>Bank</option>
+                      <option {% if acc.type == 'Crypto Wallet' %}selected{% endif %}>Crypto Wallet</option>
+                      <option {% if acc.type == 'Stock Account' %}selected{% endif %}>Stock Account</option>
+                      <option {% if acc.type == 'Credit Card' %}selected{% endif %}>Credit Card</option>
+                      <option {% if acc.type == 'Mortgage' %}selected{% endif %}>Mortgage</option>
+                      <option {% if acc.type == 'Vehicle' %}selected{% endif %}>Vehicle</option>
+                      <option {% if acc.type == 'Loan' %}selected{% endif %}>Loan</option>
+                      <option {% if acc.type == 'Other' %}selected{% endif %}>Other</option>
+                    </select>
+                    <input type="hidden" name="old_{{ loop.index0 }}" value="{{ acc.name }}">
+                  </td>
+                  <td><input name="name_{{ loop.index0 }}" value="{{ acc.name }}" class="form-control"></td>
+                  <td><input type="number" step="0.01" name="balance_{{ loop.index0 }}" value="{{ acc.balance }}" class="form-control"></td>
+                  <td><input type="number" step="0.01" name="payment_{{ loop.index0 }}" value="{{ acc.payment }}" class="form-control"></td>
+                  <td>{{ acc.months if acc.months is not none else 'n/a' }}</td>
+                  <td><input type="checkbox" name="delete" value="{{ acc.name }}" class="form-check-input"></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6">No accounts</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+            </div>
+            <div class="text-end">
+              <button class="btn btn-primary">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories Modal -->
+  <div class="modal fade" id="catsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Categories</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form method="post" action="{{ url_for('update_categories_route') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <table class="table">
+              <thead><tr><th>Name</th><th>Delete</th></tr></thead>
+              <tbody>
+              {% for cat in categories %}
+              <tr>
+                <td>
+                  <input name="name_{{ loop.index0 }}" value="{{ cat }}" class="form-control">
+                  <input type="hidden" name="old_{{ loop.index0 }}" value="{{ cat }}">
+                </td>
+                <td><input type="checkbox" name="delete" value="{{ cat }}" class="form-check-input"></td>
+              </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+            <div class="text-end">
+              <button class="btn btn-primary">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <h3 class="mt-4">Add Transaction</h3>
   <form method="post" action="{{ url_for('add_transaction_route') }}" class="row gy-2 gx-3">
@@ -98,12 +196,14 @@
   </form>
 
   <h3 class="mt-4">Budget Goals</h3>
+  <div class="table-responsive">
   <table class="table table-bordered">
     <thead>
       <tr>
         <th>Category</th>
         <th>Spent</th>
         <th>Goal</th>
+        <th>Progress</th>
       </tr>
     </thead>
     <tbody>
@@ -112,12 +212,19 @@
         <td>{{ g.category }}</td>
         <td>{{ g.spent|fmt }}</td>
         <td>{{ g.goal|fmt }}</td>
+        <td>
+          {% set pct = (100 * g.spent / g.goal) if g.goal else 0 %}
+          <div class="progress">
+            <div class="progress-bar {% if pct >= 100 %}bg-danger{% else %}bg-success{% endif %}" style="width: {{ pct if pct <= 100 else 100 }}%"></div>
+          </div>
+        </td>
       </tr>
     {% else %}
-      <tr><td colspan="3">No goals</td></tr>
+      <tr><td colspan="4">No goals</td></tr>
     {% endfor %}
     </tbody>
   </table>
+  </div>
 
   <h4>Set Goal</h4>
   <form method="post" action="{{ url_for('set_goal_route') }}" class="row g-2">
@@ -137,65 +244,13 @@
     </div>
   </form>
 
-  <h3 class="mt-4 d-flex align-items-center">Accounts
-    <button id="edit-accounts" class="btn btn-sm btn-secondary ms-2">Edit</button>
-  </h3>
+  <h3 class="mt-4">Accounts <button id="edit-accounts" class="btn btn-sm btn-secondary ms-2">Edit</button></h3>
   {% if payment_warnings %}
   <div class="alert alert-warning alert-dismissible fade show" role="alert" id="interest-alert">
     Warning: balance will increase after payment for {{ payment_warnings|join(', ') }}.
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
   {% endif %}
-  <form method="post" action="{{ url_for('update_accounts_route') }}" id="accounts-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <table class="table table-bordered">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Name</th>
-        <th>Balance</th>
-        <th>Monthly Payment</th>
-        <th>Months Left</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for acc in accounts %}
-      <tr>
-        <td class="d-flex align-items-center">
-          <input type="checkbox" name="delete" value="{{ acc.name }}" class="form-check-input shadow-sm me-2 acct-check d-none">
-          <select name="type_{{ loop.index0 }}" class="form-select form-select-sm acct-field" disabled>
-            <option {% if acc.type == 'Bank' %}selected{% endif %}>Bank</option>
-            <option {% if acc.type == 'Crypto Wallet' %}selected{% endif %}>Crypto Wallet</option>
-            <option {% if acc.type == 'Stock Account' %}selected{% endif %}>Stock Account</option>
-            <option {% if acc.type == 'Credit Card' %}selected{% endif %}>Credit Card</option>
-            <option {% if acc.type == 'Mortgage' %}selected{% endif %}>Mortgage</option>
-            <option {% if acc.type == 'Vehicle' %}selected{% endif %}>Vehicle</option>
-            <option {% if acc.type == 'Loan' %}selected{% endif %}>Loan</option>
-            <option {% if acc.type == 'Other' %}selected{% endif %}>Other</option>
-          </select>
-          <input type="hidden" name="old_{{ loop.index0 }}" value="{{ acc.name }}">
-        </td>
-        <td>
-          <input type="text" name="name_{{ loop.index0 }}" value="{{ acc.name }}" class="form-control-plaintext acct-field" readonly>
-        </td>
-        <td>
-          <input type="number" step="0.01" name="balance_{{ loop.index0 }}" value="{{ acc.balance }}" class="form-control-plaintext acct-field" readonly>
-        </td>
-        <td>
-          <input type="number" step="0.01" name="payment_{{ loop.index0 }}" value="{{ acc.payment }}" class="form-control-plaintext acct-field" readonly>
-        </td>
-        <td>{{ acc.months if acc.months is not none else 'n/a' }}</td>
-      </tr>
-    {% else %}
-      <tr><td colspan="5">No accounts</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  <div class="mt-2 d-none" id="acct-actions">
-    <button name="action" value="delete" class="btn btn-danger me-2">Delete</button>
-    <button name="action" value="save" class="btn btn-primary">Save</button>
-  </div>
-  </form>
 
   <h4>Add/Update Account</h4>
   <form method="post" action="{{ url_for('set_account_route') }}" class="row gy-2 gx-3" id="account-form">
@@ -239,6 +294,7 @@
   </form>
 
   <h4 class="mt-4">Monthly Income</h4>
+  <div class="table-responsive">
   <table class="table table-bordered">
     <thead>
       <tr><th>Description</th><th>Amount</th><th></th></tr>
@@ -260,6 +316,7 @@
     {% endfor %}
     </tbody>
   </table>
+  </div>
 
   <h5>Add Monthly Income</h5>
   <form method="post" action="{{ url_for('add_monthly_income_route') }}" class="row g-2">
@@ -311,64 +368,11 @@
   document.getElementById('account-type').addEventListener('change', updateAccountFields);
   window.addEventListener('DOMContentLoaded', updateAccountFields);
 
-  const editBtn = document.getElementById('edit-cats');
-  const checks = document.querySelectorAll('.edit-check');
-  const names = document.querySelectorAll('.edit-name');
-  const actions = document.getElementById('cat-actions');
-  editBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    const editing = editBtn.dataset.editing === '1';
-    if (editing) {
-      editBtn.textContent = 'Edit';
-      checks.forEach(cb => cb.classList.add('d-none'));
-      names.forEach(n => { n.readOnly = true; n.classList.add('form-control-plaintext'); n.classList.remove('form-control'); });
-      actions.classList.add('d-none');
-      editBtn.dataset.editing = '0';
-    } else {
-      editBtn.textContent = 'Cancel';
-      checks.forEach(cb => cb.classList.remove('d-none'));
-      names.forEach(n => { n.readOnly = false; n.classList.remove('form-control-plaintext'); n.classList.add('form-control'); });
-      actions.classList.remove('d-none');
-      editBtn.dataset.editing = '1';
-    }
+  document.getElementById('openCats').addEventListener('click', () => {
+    new bootstrap.Modal(document.getElementById('catsModal')).show();
   });
-
-  const acctBtn = document.getElementById('edit-accounts');
-  const acctChecks = document.querySelectorAll('.acct-check');
-  const acctFields = document.querySelectorAll('.acct-field');
-  const acctActions = document.getElementById('acct-actions');
-  acctBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    const editing = acctBtn.dataset.editing === '1';
-    if (editing) {
-      acctBtn.textContent = 'Edit';
-      acctChecks.forEach(cb => cb.classList.add('d-none'));
-      acctFields.forEach(f => {
-        if (f.tagName === 'SELECT') {
-          f.disabled = true;
-        } else {
-          f.readOnly = true;
-          f.classList.add('form-control-plaintext');
-          f.classList.remove('form-control');
-        }
-      });
-      acctActions.classList.add('d-none');
-      acctBtn.dataset.editing = '0';
-    } else {
-      acctBtn.textContent = 'Cancel';
-      acctChecks.forEach(cb => cb.classList.remove('d-none'));
-      acctFields.forEach(f => {
-        if (f.tagName === 'SELECT') {
-          f.disabled = false;
-        } else {
-          f.readOnly = false;
-          f.classList.remove('form-control-plaintext');
-          f.classList.add('form-control');
-        }
-      });
-      acctActions.classList.remove('d-none');
-      acctBtn.dataset.editing = '1';
-    }
+  document.getElementById('edit-accounts').addEventListener('click', () => {
+    new bootstrap.Modal(document.getElementById('accountsModal')).show();
   });
 
   const themes = {

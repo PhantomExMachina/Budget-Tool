@@ -160,6 +160,26 @@ def get_goals(user: str = "default"):
     return goals
 
 
+def get_category_expenses(user: str = "default"):
+    """Return total expenses per category for charts."""
+    conn = budget_tool.get_connection()
+    user_id = budget_tool.get_user_id(conn, user)
+    cur = conn.execute(
+        """
+        SELECT c.name, SUM(t.amount) AS total
+        FROM transactions t
+        JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id=? AND t.type='expense'
+        GROUP BY c.name
+        ORDER BY total DESC
+        """,
+        (user_id,),
+    )
+    rows = [(r["name"], r["total"] or 0) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+
 def get_account_forecast(months: int = 1):
     """Return forecasted balances for assets and debts."""
     rows = budget_tool.get_all_accounts()
@@ -223,6 +243,23 @@ def overview():
         expense=expense,
         net=net,
         expenses=expenses,
+    )
+
+
+@app.route("/dashboard")
+@require_login
+def dashboard():
+    income, expense, net = get_totals()
+    cat_data = get_category_expenses()
+    accounts, _ = get_accounts()
+    acct_data = [(a["name"], a["balance"]) for a in accounts]
+    return render_template(
+        "dashboard.html",
+        income=income,
+        expense=expense,
+        net=net,
+        cat_data=cat_data,
+        account_data=acct_data,
     )
 
 
