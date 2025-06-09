@@ -35,3 +35,17 @@ h1, h2, h3 {
 a, a:hover {
     color: #007bff;
 }
+
+.sidebar {
+    min-width: 200px;
+    min-height: 100vh;
+}
+
+.sidebar a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.sidebar a:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
