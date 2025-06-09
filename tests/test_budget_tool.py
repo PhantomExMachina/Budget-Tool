@@ -324,4 +324,3 @@ def test_monthly_income_functions(tmp_path):
     )
     assert cur.fetchone()[0] == 1
     conn.close()
-

@@ -10,7 +10,7 @@ from datetime import datetime
 import math
 import io
 from dataclasses import dataclass
-from typing import Iterable, Sequence
+from typing import Sequence
 
 
 def fmt(amount: float) -> str:

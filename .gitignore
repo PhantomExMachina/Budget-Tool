@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.db
+.env
+.mypy_cache/
+*.sqlite3
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store

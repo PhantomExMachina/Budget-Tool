@@ -77,6 +77,13 @@ This launches a local web server at `http://127.0.0.1:5000/` where you can view 
 The interface also provides an **Auto Scan** page for uploading CSV statements and identifying recurring expenses. After scanning, you can choose which charges to store as monthly expenses via check boxes before saving.
 Use the **Auto Scan** link in the navigation bar to access this page.
 
+### Environment Variables
+
+The web server reads `FLASK_SECRET_KEY` to sign session cookies. Set this to a
+secure random value when deploying. Firebase authentication also requires the
+`FIREBASE_CREDENTIALS` variable pointing to your service account JSON file and
+`AUTH_ENABLED=1` to enable login.
+
 ### Supported statement formats
 
 Uploaded CSV statements may be comma or tab delimited. The parser will automatically detect the delimiter. Dates may be in ISO format (`YYYY-MM-DD`), compact form (`YYYYMMDD`) or U.S. style (`MM/DD/YYYY`). The first row should include `Date`, `Description` and `Amount` columns.
