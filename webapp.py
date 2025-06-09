@@ -1,6 +1,7 @@
 import io
 import budget_tool
 import os
+from typing import Any
 from functools import wraps
 from flask import (
     Flask,
@@ -114,7 +115,7 @@ def get_history(
         "t.item_name, t.created_at FROM transactions t "
         "JOIN categories c ON t.category_id = c.id WHERE t.user_id = ?"
     )
-    params = [user_id]
+    params: list[Any] = [user_id]
     if start:
         query += " AND t.created_at >= ?"
         params.append(start)

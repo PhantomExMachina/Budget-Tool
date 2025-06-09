@@ -147,7 +147,7 @@ def test_delete_monthly_expense(tmp_path):
 
 
 def test_monthly_expense_creates_transaction(tmp_path):
-    client = setup_app(tmp_path)
+    _ = setup_app(tmp_path)
     budget_tool.add_category("Misc")
     budget_tool.add_monthly_expense("Gym", 10)
 
