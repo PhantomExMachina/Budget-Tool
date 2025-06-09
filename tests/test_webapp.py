@@ -102,8 +102,8 @@ def test_forecast_route(tmp_path, monkeypatch):
 def test_auto_scan_route(tmp_path, monkeypatch):
     client = setup_app(tmp_path)
     login(client, monkeypatch)
-    data1 = b"date,description,amount\n2023-01-01,Gym,10\n"
-    data2 = b"date,description,amount\n2023-02-01,Gym,10\n"
+    data1 = b"date,description,amount\n2023-01-01,Gym,-10\n"
+    data2 = b"date,description,amount\n2023-02-01,Gym,-10\n"
     def build_data():
         return {
             "statement": [
@@ -137,8 +137,8 @@ def test_auto_scan_route(tmp_path, monkeypatch):
 def test_auto_scan_one_time(tmp_path, monkeypatch):
     client = setup_app(tmp_path)
     login(client, monkeypatch)
-    data1 = b"date,description,amount\n2023-01-01,Gym,10\n2023-01-02,Coffee,5\n"
-    data2 = b"date,description,amount\n2023-02-01,Gym,10\n"
+    data1 = b"date,description,amount\n2023-01-01,Gym,-10\n2023-01-02,Coffee,-5\n"
+    data2 = b"date,description,amount\n2023-02-01,Gym,-10\n"
 
     token = get_csrf(client, "/auto-scan")
     client.post(
