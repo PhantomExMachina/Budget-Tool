@@ -26,4 +26,19 @@ document.addEventListener('DOMContentLoaded', () => {
     saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'cyborg' : 'flatly';
   }
   applyTheme(saved);
+
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || link.getAttribute('target') === '_blank' || link.getAttribute('data-bs-toggle')) {
+      return;
+    }
+    if (link.hostname !== window.location.hostname) return;
+    e.preventDefault();
+    document.body.classList.add('fade-out');
+    setTimeout(() => {
+      window.location.href = href;
+    }, 500);
+  });
 });
