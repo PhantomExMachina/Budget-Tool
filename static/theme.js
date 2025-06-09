@@ -21,6 +21,9 @@ function applyTheme(name) {
 }
 themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('theme') || 'cyborg';
+  let saved = localStorage.getItem('theme');
+  if (!saved) {
+    saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'cyborg' : 'flatly';
+  }
   applyTheme(saved);
 });
