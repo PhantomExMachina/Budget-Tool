@@ -10,7 +10,6 @@ except Exception:  # pragma: no cover - optional dependency
     credentials = None
 
 
-
 @lru_cache(maxsize=1)
 def init_firebase():
     if firebase_admin is None:
@@ -18,7 +17,9 @@ def init_firebase():
     cred_path = os.environ.get("FIREBASE_CREDENTIALS")
     if not cred_path:
         raise RuntimeError("FIREBASE_CREDENTIALS not set")
-    if not firebase_admin._apps:
+    try:
+        firebase_admin.get_app()
+    except ValueError:
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
 

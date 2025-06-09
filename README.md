@@ -49,11 +49,18 @@ different location.
 
 ## Running tests
 
-Install `pytest` and run the test suite:
+Install the required packages before running the tests:
 
 ```bash
-pip install pytest
+pip install -r requirements.txt
 pytest
+```
+
+If you prefer a separate development environment, a `requirements-dev.txt`
+file is provided with the packages needed for testing:
+
+```bash
+pip install -r requirements-dev.txt
 ```
 
 ## Web Interface
