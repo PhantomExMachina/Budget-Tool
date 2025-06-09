@@ -365,6 +365,14 @@ def convert_one_time_expense(oid: int):
     return redirect(url_for("auto_scan"))
 
 
+@app.route("/delete-one-time", methods=["POST"])
+def delete_one_time_route():
+    """Delete selected one time expenses."""
+    ids = [int(i) for i in request.form.getlist("delete")]
+    budget_tool.delete_one_time_expenses(ids)
+    return redirect(url_for("auto_scan"))
+
+
 @app.route("/add-monthly-income", methods=["POST"])
 @require_login
 def add_monthly_income_route():

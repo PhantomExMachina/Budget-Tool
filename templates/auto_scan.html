@@ -56,18 +56,27 @@
     </tbody>
   </table>
 
-  <h2 class="mt-4">One Time Expenses (Total {{ one_time_total|fmt }})</h2>
-  <table class="table table-bordered">
+  <h2 class="mt-4">
+    One Time Expenses (Total {{ one_time_total|fmt }})
+    <button id="edit-one-time" class="btn btn-sm btn-secondary ms-2">Edit</button>
+  </h2>
+  <form method="post" action="{{ url_for('delete_one_time_route') }}" id="one-time-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  </form>
+  <table class="table table-bordered" id="one-time-table">
     <thead>
-      <tr><th>Description</th><th>Amount</th><th>Date</th><th></th></tr>
+      <tr><th class="edit-col d-none"></th><th>Description</th><th>Amount</th><th>Date</th><th class="edit-col d-none"></th></tr>
     </thead>
     <tbody>
     {% for e in one_time_expenses %}
       <tr>
+        <td class="edit-col d-none text-center">
+          <input type="checkbox" form="one-time-form" name="delete" value="{{ e[0] }}" class="form-check-input">
+        </td>
         <td>{{ e[1] }}</td>
         <td>{{ e[2]|fmt }}</td>
         <td>{{ e[3][:10] }}</td>
-        <td>
+        <td class="edit-col d-none">
           <form method="post" action="{{ url_for('convert_one_time_expense', oid=e[0]) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-primary">Make Monthly</button>
@@ -75,9 +84,17 @@
         </td>
       </tr>
     {% else %}
-      <tr><td colspan="4">No one time expenses</td></tr>
+      <tr><td colspan="5">No one time expenses</td></tr>
     {% endfor %}
     </tbody>
   </table>
+  <div class="text-end edit-col d-none mb-3">
+    <button class="btn btn-danger" form="one-time-form">Delete</button>
+  </div>
+  <script>
+  document.getElementById('edit-one-time').addEventListener('click', () => {
+    document.querySelectorAll('.edit-col').forEach(el => el.classList.toggle('d-none'));
+  });
+  </script>
 </div>
 {% endblock %}
