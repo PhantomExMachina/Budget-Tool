@@ -638,6 +638,19 @@ def one_time_total() -> float:
     return total
 
 
+def delete_one_time_expenses(ids: Sequence[int]) -> None:
+    """Delete one time expenses by ID."""
+    if not ids:
+        return
+    conn = get_connection()
+    placeholders = ",".join("?" for _ in ids)
+    conn.execute(
+        f"DELETE FROM one_time_expenses WHERE id IN ({placeholders})", tuple(ids)
+    )
+    conn.commit()
+    conn.close()
+
+
 def convert_one_time_to_monthly(oid: int) -> None:
     """Convert a one time expense to a recurring monthly expense."""
     conn = get_connection()

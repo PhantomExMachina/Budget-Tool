@@ -162,6 +162,18 @@ def test_auto_scan_one_time(tmp_path, monkeypatch):
     assert budget_tool.monthly_expense_exists("Coffee")
 
 
+def test_delete_one_time(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    login(client, monkeypatch)
+    from datetime import datetime
+    budget_tool.add_one_time_expense("Temp", 5, datetime(2023, 1, 1))
+    oid = budget_tool.get_one_time_expenses()[0][0]
+    token = get_csrf(client, "/auto-scan")
+    resp = client.post("/delete-one-time", data={"delete": str(oid), "csrf_token": token})
+    assert resp.status_code == 302
+    assert budget_tool.get_one_time_expenses() == []
+
+
 def test_nav_contains_auto_scan(tmp_path):
     client = setup_app(tmp_path)
     resp = client.get("/")
