@@ -334,3 +334,19 @@ def test_monthly_expense_cli(tmp_path):
     run_cli(tmp_path, "delete-monthly-expense", "Gym")
     out2 = run_cli(tmp_path, "list-monthly-expenses").stdout
     assert "Gym" not in out2
+
+
+def test_one_time_expense_functions(tmp_path):
+    import budget_tool
+
+    budget_tool.DB_FILE = tmp_path / "budget.db"
+    budget_tool.init_db()
+    dt = datetime(2023, 1, 1)
+    budget_tool.add_one_time_expense("Laptop", 1000, dt)
+    rows = budget_tool.get_one_time_expenses()
+    assert rows and rows[0][1] == "Laptop"
+    assert budget_tool.one_time_total() == 1000
+    oid = rows[0][0]
+    budget_tool.convert_one_time_to_monthly(oid)
+    assert budget_tool.monthly_expense_exists("Laptop")
+    assert budget_tool.get_one_time_expenses() == []

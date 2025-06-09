@@ -134,6 +134,34 @@ def test_auto_scan_route(tmp_path, monkeypatch):
     assert b"name=\"add_0\"" not in resp2.data
 
 
+def test_auto_scan_one_time(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    login(client, monkeypatch)
+    data1 = b"date,description,amount\n2023-01-01,Gym,10\n2023-01-02,Coffee,5\n"
+    data2 = b"date,description,amount\n2023-02-01,Gym,10\n"
+
+    token = get_csrf(client, "/auto-scan")
+    client.post(
+        "/auto-scan",
+        data={
+            "statement": [
+                (io.BytesIO(data1), "jan.csv"),
+                (io.BytesIO(data2), "feb.csv"),
+            ],
+            "csrf_token": token,
+        },
+        content_type="multipart/form-data",
+    )
+
+    rows = budget_tool.get_one_time_expenses()
+    assert any(r[1] == "Coffee" for r in rows)
+    oid = next(r[0] for r in rows if r[1] == "Coffee")
+    token = get_csrf(client, "/auto-scan")
+    client.post(f"/convert-one-time/{oid}", data={"csrf_token": token})
+    assert not any(r[1] == "Coffee" for r in budget_tool.get_one_time_expenses())
+    assert budget_tool.monthly_expense_exists("Coffee")
+
+
 def test_nav_contains_auto_scan(tmp_path):
     client = setup_app(tmp_path)
     resp = client.get("/")

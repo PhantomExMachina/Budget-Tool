@@ -241,6 +241,15 @@ def init_db():
                 amount REAL NOT NULL
             )"""
     )
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS one_time_expenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                description TEXT NOT NULL,
+                amount REAL NOT NULL,
+                created_at TEXT NOT NULL,
+                UNIQUE(description, created_at)
+            )"""
+    )
     # add item_name column if upgrading from older DB
     cur.execute("PRAGMA table_info(transactions)")
     cols = [r[1] for r in cur.fetchall()]
@@ -563,7 +572,10 @@ def add_monthly_income(
 
     if not exists:
         conn = get_connection()
-        cur = conn.execute("SELECT 1 FROM categories WHERE name=?", (category,))
+        cur = conn.execute(
+            "SELECT 1 FROM categories WHERE name=?",
+            (category,),
+        )
         cat_exists = cur.fetchone() is not None
         conn.close()
         if not cat_exists:
@@ -589,6 +601,59 @@ def delete_monthly_income(desc: str) -> None:
     conn.execute("DELETE FROM transactions WHERE description=?", (desc,))
     conn.commit()
     conn.close()
+
+
+def add_one_time_expense(desc: str, amount: float, created_at: datetime) -> None:
+    """Store a non-recurring expense record."""
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR IGNORE INTO one_time_expenses("
+        "description, amount, created_at) VALUES(?,?,?)",
+        (desc, abs(amount), created_at.isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_one_time_expenses() -> list[tuple[int, str, float, str]]:
+    """Return all one time expenses."""
+    conn = get_connection()
+    cur = conn.execute(
+        (
+            "SELECT id, description, amount, created_at "
+            "FROM one_time_expenses ORDER BY created_at"
+        )
+    )
+    rows = [(r["id"], r["description"], r["amount"], r["created_at"]) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+
+def one_time_total() -> float:
+    """Return the total amount of all one time expenses."""
+    conn = get_connection()
+    cur = conn.execute("SELECT SUM(amount) FROM one_time_expenses")
+    total = cur.fetchone()[0] or 0.0
+    conn.close()
+    return total
+
+
+def convert_one_time_to_monthly(oid: int) -> None:
+    """Convert a one time expense to a recurring monthly expense."""
+    conn = get_connection()
+    cur = conn.execute(
+        "SELECT description, amount FROM one_time_expenses WHERE id=?",
+        (oid,),
+    )
+    row = cur.fetchone()
+    if row:
+        desc, amount = row["description"], row["amount"]
+        conn.execute("DELETE FROM one_time_expenses WHERE id=?", (oid,))
+        conn.commit()
+        conn.close()
+        add_monthly_expense(desc, amount)
+    else:
+        conn.close()
 
 
 def months_to_payoff(
