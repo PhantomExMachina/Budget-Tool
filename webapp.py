@@ -319,9 +319,14 @@ def auto_scan():
                 continue
             data = io.StringIO(f.read().decode("utf-8"))
             statements.append(budget_tool.parse_statement_csv(data))
-        found = budget_tool.find_recurring_expenses(statements, day_window=1)
+        found = budget_tool.find_recurring_expenses(statements, day_window=2)
         existing = {d for d, _ in budget_tool.get_monthly_expenses()}
         results = [(d, a) for d, a in found if d not in existing]
+        recurring_names = {d for d, _ in found}
+        for month in statements:
+            for r in month:
+                if r.amount > 0 and r.description not in recurring_names and r.description not in existing:
+                    budget_tool.add_one_time_expense(r.description, r.amount, r.date)
     elif request.method == "POST":
         i = 0
         while True:
@@ -334,15 +339,29 @@ def auto_scan():
             i += 1
         results = []
     expenses = budget_tool.get_monthly_expenses()
+    ones = budget_tool.get_one_time_expenses()
+    one_total = budget_tool.one_time_total()
     return render_template(
-        "auto_scan.html", results=results or [], categories=cats, monthly_expenses=expenses  # noqa: E501
-    )
+        "auto_scan.html",
+        results=results or [],
+        categories=cats,
+        monthly_expenses=expenses,
+        one_time_expenses=ones,
+        one_time_total=one_total,
+    )  # noqa: E501
 
 
 @app.route("/delete-monthly/<path:desc>", methods=["POST"])
 def delete_monthly_expense_route(desc: str):
     """Remove a saved monthly expense and related transactions."""
     budget_tool.delete_monthly_expense(desc)
+    return redirect(url_for("auto_scan"))
+
+
+@app.route("/convert-one-time/<int:oid>", methods=["POST"])
+def convert_one_time_expense(oid: int):
+    """Convert a one time expense into a recurring monthly cost."""
+    budget_tool.convert_one_time_to_monthly(oid)
     return redirect(url_for("auto_scan"))
 
 

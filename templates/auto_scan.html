@@ -55,5 +55,29 @@
     {% endfor %}
     </tbody>
   </table>
+
+  <h2 class="mt-4">One Time Expenses (Total {{ one_time_total|fmt }})</h2>
+  <table class="table table-bordered">
+    <thead>
+      <tr><th>Description</th><th>Amount</th><th>Date</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for e in one_time_expenses %}
+      <tr>
+        <td>{{ e[1] }}</td>
+        <td>{{ e[2]|fmt }}</td>
+        <td>{{ e[3][:10] }}</td>
+        <td>
+          <form method="post" action="{{ url_for('convert_one_time_expense', oid=e[0]) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-primary">Make Monthly</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">No one time expenses</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}
