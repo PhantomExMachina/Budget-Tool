@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link id="theme-link" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.1/dist/cyborg/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="font-link" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+  <link id="custom-theme-link" rel="stylesheet" href="{{ url_for('static', filename='style-dark.css') }}">
+  <title>Login</title>
+</head>
+<body>
+<div class="container mt-4">
+  <h1>Login</h1>
+  <form method="post">
+    <div class="mb-3">
+      <input name="token" class="form-control" placeholder="ID Token" required>
+    </div>
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <button class="btn btn-primary">Login</button>
+  </form>
+</div>
+<script src="{{ url_for('static', filename='theme.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

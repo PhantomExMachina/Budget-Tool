@@ -233,6 +233,13 @@ def init_db():
                 amount REAL NOT NULL
             )"""
     )
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS monthly_incomes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                description TEXT UNIQUE NOT NULL,
+                amount REAL NOT NULL
+            )"""
+    )
     # add item_name column if upgrading from older DB
     cur.execute("PRAGMA table_info(transactions)")
     cols = [r[1] for r in cur.fetchall()]
@@ -531,6 +538,53 @@ def delete_monthly_expense(desc: str) -> None:
     """Delete a monthly expense and matching transactions."""
     conn = get_connection()
     conn.execute("DELETE FROM monthly_expenses WHERE description=?", (desc,))
+    conn.execute("DELETE FROM transactions WHERE description=?", (desc,))
+    conn.commit()
+    conn.close()
+
+
+def add_monthly_income(
+    desc: str, amount: float, category: str = "Misc", user: str = "default"
+) -> None:
+    """Insert or replace a monthly income and create a transaction if needed."""
+    amount = abs(amount)
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO monthly_incomes(description, amount) VALUES(?,?)",
+        (desc, amount),
+    )
+    cur = conn.execute(
+        "SELECT 1 FROM transactions WHERE description=?", (desc,)
+    )
+    exists = cur.fetchone() is not None
+    conn.commit()
+    conn.close()
+
+    if not exists:
+        conn = get_connection()
+        cur = conn.execute("SELECT 1 FROM categories WHERE name=?", (category,))
+        cat_exists = cur.fetchone() is not None
+        conn.close()
+        if not cat_exists:
+            add_category(category)
+        add_transaction(category, amount, "income", desc, user=user)
+
+
+def get_monthly_incomes() -> list[tuple[str, float]]:
+    """Return all stored monthly incomes."""
+    conn = get_connection()
+    cur = conn.execute(
+        "SELECT description, amount FROM monthly_incomes ORDER BY description"
+    )
+    rows = [(r[0], r[1]) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+
+def delete_monthly_income(desc: str) -> None:
+    """Delete a monthly income and matching transactions."""
+    conn = get_connection()
+    conn.execute("DELETE FROM monthly_incomes WHERE description=?", (desc,))
     conn.execute("DELETE FROM transactions WHERE description=?", (desc,))
     conn.commit()
     conn.close()
@@ -1017,6 +1071,21 @@ def parse_args() -> argparse.Namespace:
     parser_export.add_argument("--output", default="transactions.csv")
     parser_export.add_argument("--user", default="default")
 
+    parser_add_mi = subparsers.add_parser(
+        "add-monthly-income", help="Add recurring monthly income"
+    )
+    parser_add_mi.add_argument("description")
+    parser_add_mi.add_argument("amount", type=float)
+    parser_add_mi.add_argument("--category", default="Misc")
+    parser_add_mi.add_argument("--user", default="default")
+
+    parser_del_mi = subparsers.add_parser(
+        "delete-monthly-income", help="Delete recurring monthly income"
+    )
+    parser_del_mi.add_argument("description")
+
+    subparsers.add_parser("list-monthly-incomes", help="List recurring incomes")
+
     parser_acc = subparsers.add_parser(
         "set-account", help="Add or update an account balance"
     )
@@ -1109,6 +1178,16 @@ def main() -> None:
     elif args.command == "history":
         init_db()
         list_transactions(args.category, args.limit, args.user)
+    elif args.command == "add-monthly-income":
+        init_db()
+        add_monthly_income(args.description, args.amount, args.category, args.user)
+    elif args.command == "list-monthly-incomes":
+        init_db()
+        for desc, amt in get_monthly_incomes():
+            print(f"- {desc}: {fmt(amt)}")
+    elif args.command == "delete-monthly-income":
+        init_db()
+        delete_monthly_income(args.description)
     elif args.command == "set-account":
         init_db()
         set_account(
