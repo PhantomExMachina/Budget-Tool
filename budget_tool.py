@@ -1090,6 +1090,20 @@ def parse_args() -> argparse.Namespace:
 
     subparsers.add_parser("list-monthly-incomes", help="List recurring incomes")
 
+    parser_add_me = subparsers.add_parser(
+        "add-monthly-expense", help="Add recurring monthly expense"
+    )
+    parser_add_me.add_argument("description")
+    parser_add_me.add_argument("amount", type=float)
+    parser_add_me.add_argument("--category", default="Misc")
+
+    parser_del_me = subparsers.add_parser(
+        "delete-monthly-expense", help="Delete recurring monthly expense"
+    )
+    parser_del_me.add_argument("description")
+
+    subparsers.add_parser("list-monthly-expenses", help="List recurring expenses")
+
     parser_acc = subparsers.add_parser(
         "set-account", help="Add or update an account balance"
     )
@@ -1192,6 +1206,16 @@ def main() -> None:
     elif args.command == "delete-monthly-income":
         init_db()
         delete_monthly_income(args.description)
+    elif args.command == "add-monthly-expense":
+        init_db()
+        add_monthly_expense(args.description, args.amount, args.category)
+    elif args.command == "list-monthly-expenses":
+        init_db()
+        for desc, amt in get_monthly_expenses():
+            print(f"- {desc}: {fmt(amt)}")
+    elif args.command == "delete-monthly-expense":
+        init_db()
+        delete_monthly_expense(args.description)
     elif args.command == "set-account":
         init_db()
         set_account(

@@ -324,3 +324,13 @@ def test_monthly_income_functions(tmp_path):
     )
     assert cur.fetchone()[0] == 1
     conn.close()
+
+
+def test_monthly_expense_cli(tmp_path):
+    run_cli(tmp_path, "init")
+    run_cli(tmp_path, "add-monthly-expense", "Gym", "20")
+    out = run_cli(tmp_path, "list-monthly-expenses").stdout
+    assert "Gym" in out
+    run_cli(tmp_path, "delete-monthly-expense", "Gym")
+    out2 = run_cli(tmp_path, "list-monthly-expenses").stdout
+    assert "Gym" not in out2

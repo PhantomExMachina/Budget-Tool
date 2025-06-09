@@ -4,3 +4,4 @@ pytest
 firebase-admin
 
 Flask
+Flask-WTF

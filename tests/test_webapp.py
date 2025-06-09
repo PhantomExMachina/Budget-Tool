@@ -14,9 +14,17 @@ def setup_app(tmp_path):
     return webapp.app.test_client()
 
 
+def get_csrf(client, path="/manage"):
+    resp = client.get(path)
+    import re
+    match = re.search(r'name="csrf_token" value="([^"]+)"', resp.get_data(as_text=True))
+    return match.group(1) if match else None
+
+
 def login(client, monkeypatch):
     monkeypatch.setattr(budget_tool, "login_user", lambda t: "tester")
-    client.post("/login", data={"token": "x"})
+    token = get_csrf(client, "/login")
+    client.post("/login", data={"token": "x", "csrf_token": token})
 
 
 def get_account_names(conn):
@@ -44,6 +52,8 @@ def test_update_accounts_delete(tmp_path):
         "payment_1": "20",
         "type_1": "Bank",
     }
+    token = get_csrf(client)
+    data["csrf_token"] = token
     client.post("/update-accounts", data=data)
 
     conn = budget_tool.get_connection()
@@ -65,6 +75,8 @@ def test_update_accounts_preserve_apr(tmp_path):
         "type_0": "Credit Card",
     }
 
+    token = get_csrf(client)
+    data["csrf_token"] = token
     client.post("/update-accounts", data=data)
 
     conn = budget_tool.get_connection()
@@ -100,15 +112,25 @@ def test_auto_scan_route(tmp_path, monkeypatch):
             ]
         }
 
-    resp = client.post("/auto-scan", data=build_data(), content_type="multipart/form-data")
+    token = get_csrf(client, "/auto-scan")
+    resp = client.post(
+        "/auto-scan",
+        data=dict(build_data(), csrf_token=token),
+        content_type="multipart/form-data",
+    )
     assert resp.status_code == 200
     assert b"Gym" in resp.data
     assert b"name=\"add_0\"" in resp.data
 
-    save = {"desc_0": "Gym", "amt_0": "10", "add_0": "on"}
+    save = {"desc_0": "Gym", "amt_0": "10", "add_0": "on", "csrf_token": token}
     client.post("/auto-scan", data=save)
 
-    resp2 = client.post("/auto-scan", data=build_data(), content_type="multipart/form-data")
+    token = get_csrf(client, "/auto-scan")
+    resp2 = client.post(
+        "/auto-scan",
+        data=dict(build_data(), csrf_token=token),
+        content_type="multipart/form-data",
+    )
     assert b"name=\"add_0\"" not in resp2.data
 
 
@@ -131,7 +153,8 @@ def test_delete_monthly_expense(tmp_path):
     budget_tool.add_monthly_expense("Gym", 10)
     budget_tool.add_transaction("Misc", 10, "expense", "Gym")
 
-    resp = client.post("/delete-monthly/Gym")
+    token = get_csrf(client)
+    resp = client.post("/delete-monthly/Gym", data={"csrf_token": token})
     assert resp.status_code == 302
 
     conn = budget_tool.get_connection()
@@ -171,7 +194,8 @@ def test_delete_transaction_removes_monthly(tmp_path):
     tid = cur.fetchone()["id"]
     conn.close()
 
-    client.post(f"/delete/{tid}")
+    token = get_csrf(client)
+    client.post(f"/delete/{tid}", data={"csrf_token": token})
 
     conn = budget_tool.get_connection()
     cur = conn.execute(
@@ -185,13 +209,15 @@ def test_monthly_income_routes(tmp_path, monkeypatch):
     client = setup_app(tmp_path)
     budget_tool.add_category("Job")
     login(client, monkeypatch)
+    token = get_csrf(client)
     client.post(
         "/add-monthly-income",
-        data={"desc": "Salary", "amount": "50", "category": "Job"},
+        data={"desc": "Salary", "amount": "50", "category": "Job", "csrf_token": token},
     )
     resp = client.get("/manage")
     assert b"Salary" in resp.data
-    client.post("/delete-monthly-income/Salary")
+    token = get_csrf(client)
+    client.post("/delete-monthly-income/Salary", data={"csrf_token": token})
     resp2 = client.get("/manage")
     assert b"Salary" not in resp2.data
 
@@ -224,4 +250,13 @@ def test_history_date_filter(tmp_path, monkeypatch):
     resp = client.get("/history?start=2023-01-15&end=2023-02-28")
     assert b"new" in resp.data
     assert b"old" not in resp.data
+
+
+def test_csrf_required(tmp_path):
+    client = setup_app(tmp_path)
+    resp = client.post("/add-category", data={"name": "X"})
+    assert resp.status_code == 400
+    token = get_csrf(client)
+    resp = client.post("/add-category", data={"name": "X", "csrf_token": token})
+    assert resp.status_code == 302
 

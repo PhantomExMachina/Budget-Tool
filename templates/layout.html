@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link id="theme-link" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.1/dist/cyborg/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="font-link" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+  <link id="custom-theme-link" rel="stylesheet" href="{{ url_for('static', filename='style-dark.css') }}">
+  <title>Budget Tool</title>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('overview') }}">Budget Tool</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('overview') }}">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('manage') }}">Manage</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('history') }}">History</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('auto_scan') }}">Auto Scan</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('forecast_route') }}">Forecast</a></li>
+        <li class="nav-item d-flex align-items-center ms-3">
+          <select id="theme-select" class="form-select form-select-sm">
+            <option value="cyborg">Cyborg</option>
+            <option value="darkly">Darkly</option>
+            <option value="flatly">Flatly</option>
+            <option value="litera">Litera</option>
+            <option value="solar">Solar</option>
+          </select>
+        </li>
+        <li class="nav-item">
+          {% if session.get('user') %}
+          <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+          {% else %}
+          <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+          {% endif %}
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<div class="container mt-4">
+{% block content %}{% endblock %}
+</div>
+<script src="{{ url_for('static', filename='theme.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
