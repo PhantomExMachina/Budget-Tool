@@ -14,6 +14,7 @@ from flask import (
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devkey")
+AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "0") == "1"
 
 
 @app.template_filter("fmt")
@@ -26,7 +27,7 @@ def require_login(func):
     """Decorator to ensure a user is logged in."""
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if not session.get("user"):
+        if AUTH_ENABLED and not session.get("user"):
             return redirect(url_for("login"))
         return func(*args, **kwargs)
 
@@ -188,6 +189,9 @@ def get_account_forecast(months: int = 1):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = None
+    if not AUTH_ENABLED:
+        session["user"] = "default"
+        return redirect(url_for("overview"))
     if request.method == "POST":
         token = request.form.get("token", "")
         username = budget_tool.login_user(token)
