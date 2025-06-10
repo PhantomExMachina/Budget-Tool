@@ -1,0 +1,60 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h1>Budget</h1>
+<div class="mb-3">
+  <label for="acctSelect" class="form-label">Account</label>
+  <select id="acctSelect" class="form-select">
+  {% for a in accounts %}
+    <option value="{{ loop.index0 }}">{{ a.name }}</option>
+  {% else %}
+    <option disabled>No accounts</option>
+  {% endfor %}
+  </select>
+</div>
+<div class="mb-3">
+  <label for="extraRange" class="form-label">Extra Payment: $<span id="extraVal">0</span></label>
+  <input type="range" class="form-range" id="extraRange" min="0" max="{{ net }}" step="1" value="0">
+</div>
+<p>Left over each month: $<span id="leftover">{{ net|fmt }}</span></p>
+<p>Months to payoff: <span id="months">{{ accounts[0].months if accounts else 'n/a' }}</span></p>
+<script>
+const net = {{ net }};
+const accounts = {{ accounts | tojson }};
+function monthsToPayoff(balance, payment, apr, esc, ins, tax){
+  const principal = payment - esc - ins - tax;
+  if(principal <= 0) return null;
+  if(apr <= 0){
+    return Math.ceil((balance + principal - 1) / principal);
+  }
+  let r = apr/12/100;
+  let months = 0;
+  let prev = balance;
+  while(balance > 0 && months < 10000){
+    const interest = balance * r;
+    balance = balance + interest - principal;
+    months++;
+    if(balance >= prev) return null;
+    prev = balance;
+  }
+  return months;
+}
+function update(){
+  const idx = document.getElementById('acctSelect').value;
+  const extra = parseFloat(document.getElementById('extraRange').value);
+  document.getElementById('extraVal').textContent = extra.toLocaleString(undefined,{minimumFractionDigits:2});
+  const left = net - extra;
+  document.getElementById('leftover').textContent = left.toLocaleString(undefined,{minimumFractionDigits:2});
+  const acc = accounts[idx];
+  if(!acc){
+    document.getElementById('months').textContent = 'n/a';
+    return;
+  }
+  const m = monthsToPayoff(acc.balance, acc.payment + extra, acc.apr, acc.escrow, acc.insurance, acc.tax);
+  document.getElementById('months').textContent = m === null ? 'n/a' : m;
+}
+['acctSelect','extraRange'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', update);
+});
+document.addEventListener('DOMContentLoaded', update);
+</script>
+{% endblock %}

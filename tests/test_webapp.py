@@ -214,6 +214,13 @@ def test_nav_contains_auto_scan(tmp_path):
     assert b"/auto-scan" in resp.data
 
 
+def test_nav_contains_budget(tmp_path):
+    client = setup_app(tmp_path)
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert b"/budget" in resp.data
+
+
 def test_protected_requires_login(tmp_path):
     client = setup_app(tmp_path)
     resp = client.get("/manage")
@@ -358,4 +365,13 @@ def test_dashboard_data(tmp_path, monkeypatch):
     data = resp.get_json()
     assert "categories" in data
     assert data["categories"][0][0] == "Food"
+
+
+def test_budget_route(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    budget_tool.set_account("Loan", 1000, 50, "Loan")
+    login(client, monkeypatch)
+    resp = client.get("/budget")
+    assert resp.status_code == 200
+    assert b"Budget" in resp.data
 
