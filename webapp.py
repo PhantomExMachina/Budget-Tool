@@ -18,6 +18,12 @@ from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devkey")
+app.config["SESSION_COOKIE_SECURE"] = (
+    os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
+)
+app.config["SESSION_COOKIE_SAMESITE"] = os.environ.get(
+    "SESSION_COOKIE_SAMESITE", "Lax"
+)
 csrf = CSRFProtect(app)
 AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "0") == "1"
 app.register_blueprint(api_bp, url_prefix="/api")

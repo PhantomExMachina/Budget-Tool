@@ -90,6 +90,9 @@ The web server reads `FLASK_SECRET_KEY` to sign session cookies. Set this to a
 secure random value when deploying. Firebase authentication also requires the
 `FIREBASE_CREDENTIALS` variable pointing to your service account JSON file and
 `AUTH_ENABLED=1` to enable login.
+`SESSION_COOKIE_SECURE` and `SESSION_COOKIE_SAMESITE` may be set to harden
+cookies in production. Use `DATABASE_URL` to point to a remote database
+instead of the local SQLite file.
 
 ### Supported statement formats
 
@@ -111,3 +114,13 @@ SQLITE_KEY=mysecret python3 budget_tool.py init
 
 All subsequent CLI and web operations will open the database with the
 same key.
+
+## Database Migrations
+Database schema changes are managed with Alembic. Initialize the migration
+environment and apply migrations using:
+
+```bash
+alembic upgrade head
+```
+
+Set `DATABASE_URL` to run migrations against a remote database.
