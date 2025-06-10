@@ -6,7 +6,7 @@ import csv
 import os
 import sqlite3
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
 import io
 from dataclasses import dataclass
@@ -258,6 +258,15 @@ def init_db():
                 amount REAL NOT NULL,
                 created_at TEXT NOT NULL,
                 UNIQUE(description, created_at)
+            )"""
+    )
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS subscriptions (
+                user_id INTEGER PRIMARY KEY,
+                tier TEXT NOT NULL DEFAULT 'free' CHECK(tier IN ('free','premium')),
+                start_date TEXT NOT NULL,
+                last_sync TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
             )"""
     )
     # add item_name column if upgrading from older DB
@@ -685,6 +694,87 @@ def convert_one_time_to_monthly(oid: int) -> None:
         add_monthly_expense(desc, amount)
     else:
         conn.close()
+
+
+def set_subscription(username: str, tier: str) -> None:
+    """Create or update a user's subscription tier."""
+    tier = tier.lower()
+    if tier not in ("free", "premium"):
+        raise ValueError("tier must be 'free' or 'premium'")
+
+    conn = get_connection()
+    user_id = get_user_id(conn, username)
+    now = datetime.utcnow().isoformat()
+    conn.execute(
+        (
+            "INSERT INTO subscriptions(user_id, tier, start_date) "
+            "VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET tier=excluded.tier"
+        ),
+        (user_id, tier, now),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_subscription_tier(username: str) -> str:
+    """Return the subscription tier for a user (defaults to 'free')."""
+    conn = get_connection()
+    user_id = get_user_id(conn, username)
+    cur = conn.execute(
+        "SELECT tier FROM subscriptions WHERE user_id=?",
+        (user_id,),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["tier"] if row else "free"
+
+
+def _get_subscription_record(username: str):
+    conn = get_connection()
+    user_id = get_user_id(conn, username)
+    cur = conn.execute(
+        "SELECT tier, last_sync FROM subscriptions WHERE user_id=?",
+        (user_id,),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def can_generate_transactions(username: str) -> bool:
+    """Return True if the user may perform a transaction sync."""
+    row = _get_subscription_record(username)
+    if not row or row["tier"] != "premium":
+        return False
+    last = row["last_sync"]
+    if not last:
+        return True
+    try:
+        last_dt = datetime.fromisoformat(last)
+    except ValueError:
+        return True
+    return datetime.utcnow() - last_dt >= timedelta(days=1)
+
+
+def record_transaction_sync(username: str) -> None:
+    """Update the last_sync timestamp for a user."""
+    conn = get_connection()
+    user_id = get_user_id(conn, username)
+    conn.execute(
+        "UPDATE subscriptions SET last_sync=? WHERE user_id=?",
+        (datetime.utcnow().isoformat(), user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def generate_transactions_from_plaid(username: str) -> None:
+    """Fetch transactions via Plaid (placeholder)."""
+    if not can_generate_transactions(username):
+        raise RuntimeError("Daily transaction generation already performed")
+    # TODO: Integrate with Plaid API
+    print(f"Generating transactions for {username} (not yet implemented)")
+    record_transaction_sync(username)
 
 
 def months_to_payoff(
@@ -1240,6 +1330,18 @@ def parse_args() -> argparse.Namespace:
     parser_hist.add_argument("--limit", type=int, default=10)
     parser_hist.add_argument("--user", default="default")
 
+    parser_sub = subparsers.add_parser(
+        "set-subscription", help="Set subscription tier"
+    )
+    parser_sub.add_argument("tier", choices=["free", "premium"])
+    parser_sub.add_argument("--user", default="default")
+
+    parser_gen = subparsers.add_parser(
+        "generate-transactions",
+        help="Fetch transactions from Plaid (premium only)",
+    )
+    parser_gen.add_argument("--user", default="default")
+
     return parser.parse_args()
 
 
@@ -1339,6 +1441,15 @@ def main() -> None:
     elif args.command == "delete-account":
         init_db()
         delete_account(args.name)
+    elif args.command == "set-subscription":
+        init_db()
+        set_subscription(args.user, args.tier)
+    elif args.command == "generate-transactions":
+        init_db()
+        try:
+            generate_transactions_from_plaid(args.user)
+        except RuntimeError as e:
+            print(e)
     else:
         print("No command provided. Use -h for help.")
 
