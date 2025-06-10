@@ -94,3 +94,20 @@ secure random value when deploying. Firebase authentication also requires the
 ### Supported statement formats
 
 Uploaded CSV statements may be comma or tab delimited. The parser will automatically detect the delimiter. Dates may be in ISO format (`YYYY-MM-DD`), compact form (`YYYYMMDD`) or U.S. style (`MM/DD/YYYY`). The first row should include `Date`, `Description` and `Amount` columns. If a column containing the word `Category` (e.g. `Transaction Category`) is present it will be used to assign categories when saving monthly expenses.
+
+## REST API
+A REST API is available for mobile or third-party clients. When running
+`webapp.py`, requests may be made to `/api/*` endpoints using a Bearer token
+in the `Authorization` header. Supported resources include categories,
+transactions, accounts and goals.
+
+## Encrypted Databases
+Set the `SQLITE_KEY` environment variable to create an encrypted database
+using SQLCipher. Install the optional `pysqlcipher3` package and run:
+
+```bash
+SQLITE_KEY=mysecret python3 budget_tool.py init
+```
+
+All subsequent CLI and web operations will open the database with the
+same key.

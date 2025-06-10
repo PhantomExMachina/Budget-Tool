@@ -6,7 +6,7 @@
     <div class="card bg-success text-white">
       <div class="card-body">
         <h5 class="card-title">Income</h5>
-        <p class="card-text">{{ income|fmt }}</p>
+        <p class="card-text" id="income">0.00</p>
       </div>
     </div>
   </div>
@@ -14,7 +14,7 @@
     <div class="card bg-danger text-white">
       <div class="card-body">
         <h5 class="card-title">Expense</h5>
-        <p class="card-text">{{ expense|fmt }}</p>
+        <p class="card-text" id="expense">0.00</p>
       </div>
     </div>
   </div>
@@ -22,7 +22,7 @@
     <div class="card bg-primary text-white">
       <div class="card-body">
         <h5 class="card-title">Net Balance</h5>
-        <p class="card-text">{{ net|fmt }}</p>
+        <p class="card-text" id="net">0.00</p>
       </div>
     </div>
   </div>
@@ -39,29 +39,30 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const catData = {{ cat_data|tojson }};
-const acctData = {{ account_data|tojson }};
-new Chart(document.getElementById('catChart').getContext('2d'), {
-  type: 'bar',
-  data: {
-    labels: catData.map(r => r[0]),
-    datasets: [{label: 'Spent', data: catData.map(r => r[1]), backgroundColor: '#007bff'}]
-  },
-  options: {
-    plugins: {legend: {display: false}, tooltip: {enabled: true}},
-    animation: {duration: 700}
-  }
-});
-new Chart(document.getElementById('acctChart').getContext('2d'), {
-  type: 'pie',
-  data: {
-    labels: acctData.map(r => r[0]),
-    datasets: [{data: acctData.map(r => r[1])}]
-  },
-  options: {
-    plugins: {tooltip: {enabled: true}},
-    animation: {duration: 700}
-  }
-});
+fetch('/dashboard-data')
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('income').textContent =
+      data.income.toLocaleString(undefined,{minimumFractionDigits:2});
+    document.getElementById('expense').textContent =
+      data.expense.toLocaleString(undefined,{minimumFractionDigits:2});
+    document.getElementById('net').textContent =
+      data.net.toLocaleString(undefined,{minimumFractionDigits:2});
+    const catData = data.categories;
+    const acctData = data.accounts;
+    new Chart(document.getElementById('catChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: catData.map(r => r[0]),
+        datasets: [{label: 'Spent', data: catData.map(r => r[1]), backgroundColor: '#007bff'}]
+      },
+      options: {plugins: {legend:{display:false}, tooltip:{enabled:true}}, animation:{duration:700}}
+    });
+    new Chart(document.getElementById('acctChart').getContext('2d'), {
+      type: 'pie',
+      data: {labels: acctData.map(r => r[0]), datasets: [{data: acctData.map(r => r[1])}]},
+      options: {plugins:{tooltip:{enabled:true}}, animation:{duration:700}}
+    });
+  });
 </script>
 {% endblock %}

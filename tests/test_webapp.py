@@ -347,3 +347,15 @@ def test_csrf_required(tmp_path):
     resp = client.post("/add-category", data={"name": "X", "csrf_token": token})
     assert resp.status_code == 302
 
+
+def test_dashboard_data(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    budget_tool.add_category("Food")
+    budget_tool.add_transaction("Food", 10, "expense")
+    login(client, monkeypatch)
+    resp = client.get("/dashboard-data")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "categories" in data
+    assert data["categories"][0][0] == "Food"
+
