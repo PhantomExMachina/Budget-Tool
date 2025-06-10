@@ -375,3 +375,30 @@ def test_budget_route(tmp_path, monkeypatch):
     assert resp.status_code == 200
     assert b"Budget" in resp.data
 
+
+def test_budget_excludes_bank(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    budget_tool.set_account("Checking", 100, 0, "Bank")
+    budget_tool.set_account("Loan", 500, 50, "Loan")
+    login(client, monkeypatch)
+    resp = client.get("/budget")
+    assert b"Checking" not in resp.data
+    assert b"Loan" in resp.data
+
+
+def test_commit_extra_payment(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    budget_tool.set_account("Loan", 1000, 50, "Loan")
+    login(client, monkeypatch)
+    token = get_csrf(client, "/budget")
+    client.post(
+        "/commit-extra",
+        data={"account": "Loan", "extra": "25", "csrf_token": token},
+    )
+    amt = budget_tool.get_monthly_expense_amount("Extra Payment - Loan")
+    assert amt == 25
+    assets, debts = webapp.get_account_forecast(1)
+    loan = next(d for d in debts if d["name"] == "Loan")
+    exp = budget_tool.account_balance_after_months(1000, 75, 0, 0, 0, 0, 1)
+    assert loan["future"] == exp
+

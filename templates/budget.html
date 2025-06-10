@@ -17,6 +17,12 @@
 </div>
 <p>Left over each month: $<span id="leftover">{{ net|fmt }}</span></p>
 <p>Months to payoff: <span id="months">{{ accounts[0].months if accounts else 'n/a' }}</span></p>
+<form method="post" action="{{ url_for('commit_extra') }}" class="mb-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="account" id="accountField">
+  <input type="hidden" name="extra" id="extraField">
+  <button class="btn btn-primary">Commit Extra Payment</button>
+</form>
 <script>
 const net = {{ net }};
 const accounts = {{ accounts | tojson }};
@@ -45,6 +51,8 @@ function update(){
   const left = net - extra;
   document.getElementById('leftover').textContent = left.toLocaleString(undefined,{minimumFractionDigits:2});
   const acc = accounts[idx];
+  document.getElementById('extraField').value = extra;
+  document.getElementById('accountField').value = acc ? acc.name : '';
   if(!acc){
     document.getElementById('months').textContent = 'n/a';
     return;

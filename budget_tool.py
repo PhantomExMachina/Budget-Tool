@@ -613,6 +613,18 @@ def monthly_expense_exists(desc: str) -> bool:
     return exists
 
 
+def get_monthly_expense_amount(desc: str) -> float | None:
+    """Return the amount for a specific monthly expense if present."""
+    conn = get_connection()
+    cur = conn.execute(
+        "SELECT amount FROM monthly_expenses WHERE description=?",
+        (desc,),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
 def delete_monthly_expense(desc: str) -> None:
     """Delete a monthly expense and matching transactions."""
     conn = get_connection()

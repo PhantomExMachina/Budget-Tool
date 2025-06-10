@@ -71,9 +71,13 @@ def get_accounts():
     data: list[dict] = []
     warnings: list[str] = []
     for r in rows:
+        extra = (
+            budget_tool.get_monthly_expense_amount(f"Extra Payment - {r['name']}")
+            or 0.0
+        )
         months = budget_tool.months_to_payoff(
             r["balance"],
-            r["monthly_payment"],
+            r["monthly_payment"] + extra,
             r["apr"],
             r["escrow"],
             r["insurance"],
@@ -81,7 +85,7 @@ def get_accounts():
         )
         next_balance = budget_tool.account_balance_after_months(
             r["balance"],
-            r["monthly_payment"],
+            r["monthly_payment"] + extra,
             r["apr"],
             r["escrow"],
             r["insurance"],
@@ -200,9 +204,13 @@ def get_account_forecast(months: int = 1):
     assets: list[dict] = []
     debts: list[dict] = []
     for r in rows:
+        extra = (
+            budget_tool.get_monthly_expense_amount(f"Extra Payment - {r['name']}")
+            or 0.0
+        )
         future = budget_tool.account_balance_after_months(
             r["balance"],
-            r["monthly_payment"],
+            r["monthly_payment"] + extra,
             r["apr"],
             r["escrow"],
             r["insurance"],
@@ -332,11 +340,24 @@ def budget_page():
     """Interactive budgeting tool with payment slider."""
     income, expense, net = get_totals()
     accounts, _ = get_accounts()
+    accounts = [a for a in accounts if a["type"] != "Bank"]
     return render_template(
         "budget.html",
         accounts=accounts,
         net=net,
     )
+
+
+@app.route("/commit-extra", methods=["POST"])
+@require_login
+def commit_extra():
+    """Save the selected extra payment as a recurring expense."""
+    account = request.form.get("account")
+    extra = request.form.get("extra", type=float)
+    if account and extra and extra > 0:
+        desc = f"Extra Payment - {account}"
+        budget_tool.add_monthly_expense(desc, extra, "Extra Payment")
+    return redirect(url_for("budget_page"))
 
 
 @app.route("/auto-scan", methods=["GET", "POST"])
