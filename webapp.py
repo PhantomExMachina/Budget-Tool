@@ -343,11 +343,13 @@ def budget_page():
     accounts, _ = get_accounts()
     accounts = [a for a in accounts if a["type"] != "Bank"]
     extras_total = sum(a.get("extra", 0) for a in accounts)
-    leftover = net - extras_total
+    extra_tx_total = budget_tool.get_extra_transaction_total()
+    base_net = net + extra_tx_total
+    leftover = base_net - extras_total
     return render_template(
         "budget.html",
         accounts=accounts,
-        net=net,
+        net=base_net,
         leftover=leftover,
     )
 
