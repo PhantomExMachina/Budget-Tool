@@ -3,6 +3,7 @@ import budget_tool
 import os
 from typing import Any
 from functools import wraps
+from api import bp as api_bp
 from flask import (
     Flask,
     render_template,
@@ -11,6 +12,7 @@ from flask import (
     url_for,
     Response,
     session,
+    jsonify,
 )
 from flask_wtf.csrf import CSRFProtect
 
@@ -18,6 +20,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "devkey")
 csrf = CSRFProtect(app)
 AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "0") == "1"
+app.register_blueprint(api_bp, url_prefix="/api")
+csrf.exempt(api_bp)
 
 
 @app.template_filter("fmt")
@@ -249,17 +253,24 @@ def overview():
 @app.route("/dashboard")
 @require_login
 def dashboard():
+    return render_template("dashboard.html")
+
+
+@app.route("/dashboard-data")
+@require_login
+def dashboard_data():
     income, expense, net = get_totals()
     cat_data = get_category_expenses()
     accounts, _ = get_accounts()
     acct_data = [(a["name"], a["balance"]) for a in accounts]
-    return render_template(
-        "dashboard.html",
-        income=income,
-        expense=expense,
-        net=net,
-        cat_data=cat_data,
-        account_data=acct_data,
+    return jsonify(
+        {
+            "income": income,
+            "expense": expense,
+            "net": net,
+            "categories": cat_data,
+            "accounts": acct_data,
+        }
     )
 
 

@@ -26,6 +26,12 @@ AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "0") == "1"
 
 DEFAULT_DB = Path(__file__).with_name("budget.db")
 DB_FILE = Path(os.environ.get("BUDGET_DB", DEFAULT_DB))
+SQLITE_KEY = os.environ.get("SQLITE_KEY")
+if SQLITE_KEY:
+    try:
+        import pysqlcipher3.dbapi2 as sqlcipher  # type: ignore
+    except Exception:  # pragma: no cover - optional dependency
+        sqlcipher = None
 
 
 @dataclass
@@ -176,7 +182,13 @@ def find_recurring_expenses(
 
 def get_connection():
     """Return a SQLite connection using the configured database file."""
-    conn = sqlite3.connect(DB_FILE)
+    if SQLITE_KEY:
+        if sqlcipher is None:
+            raise RuntimeError("pysqlcipher3 is required for encrypted databases")
+        conn = sqlcipher.connect(DB_FILE)
+        conn.execute(f"PRAGMA key='{SQLITE_KEY}'")
+    else:
+        conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
