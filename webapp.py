@@ -106,6 +106,7 @@ def get_accounts():
                 "insurance": r["insurance"],
                 "tax": r["tax"],
                 "months": months,
+                "extra": extra,
                 "increase": increase,
             }
         )
@@ -341,10 +342,13 @@ def budget_page():
     income, expense, net = get_totals()
     accounts, _ = get_accounts()
     accounts = [a for a in accounts if a["type"] != "Bank"]
+    extras_total = sum(a.get("extra", 0) for a in accounts)
+    leftover = net - extras_total
     return render_template(
         "budget.html",
         accounts=accounts,
         net=net,
+        leftover=leftover,
     )
 
 
@@ -354,9 +358,13 @@ def commit_extra():
     """Save the selected extra payment as a recurring expense."""
     account = request.form.get("account")
     extra = request.form.get("extra", type=float)
-    if account and extra and extra > 0:
+    if account is not None:
         desc = f"Extra Payment - {account}"
-        budget_tool.add_monthly_expense(desc, extra, "Extra Payment")
+        if extra and extra > 0:
+            budget_tool.add_monthly_expense(desc, extra, "Extra Payment")
+        else:
+            if budget_tool.monthly_expense_exists(desc):
+                budget_tool.delete_monthly_expense(desc)
     return redirect(url_for("budget_page"))
 
 

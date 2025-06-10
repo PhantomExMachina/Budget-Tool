@@ -402,3 +402,31 @@ def test_commit_extra_payment(tmp_path, monkeypatch):
     exp = budget_tool.account_balance_after_months(1000, 75, 0, 0, 0, 0, 1)
     assert loan["future"] == exp
 
+
+def test_update_extra_payment(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    budget_tool.set_account("Loan", 1000, 50, "Loan")
+    login(client, monkeypatch)
+    token = get_csrf(client, "/budget")
+    client.post(
+        "/commit-extra",
+        data={"account": "Loan", "extra": "25", "csrf_token": token},
+    )
+    # update to new amount
+    token = get_csrf(client, "/budget")
+    client.post(
+        "/commit-extra",
+        data={"account": "Loan", "extra": "40", "csrf_token": token},
+    )
+    amt = budget_tool.get_monthly_expense_amount("Extra Payment - Loan")
+    assert amt == 40
+    # remove extra payment
+    token = get_csrf(client, "/budget")
+    client.post(
+        "/commit-extra",
+        data={"account": "Loan", "extra": "0", "csrf_token": token},
+    )
+    assert (
+        budget_tool.get_monthly_expense_amount("Extra Payment - Loan") is None
+    )
+

@@ -1,28 +1,24 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h1>Budget</h1>
-<div class="mb-3">
-  <label for="acctSelect" class="form-label">Account</label>
-  <select id="acctSelect" class="form-select">
-  {% for a in accounts %}
-    <option value="{{ loop.index0 }}">{{ a.name }}</option>
-  {% else %}
-    <option disabled>No accounts</option>
-  {% endfor %}
-  </select>
+<p>Left over each month: $<span id="leftover">{{ leftover|fmt }}</span></p>
+{% for a in accounts %}
+<div class="card mb-3 p-3">
+  <h5 class="card-title">{{ a.name }}</h5>
+  <p>Balance: {{ a.balance|fmt }} | Payment: {{ a.payment|fmt }}</p>
+  <label for="extraRange{{ loop.index0 }}" class="form-label">Extra Payment: $<span id="extraVal{{ loop.index0 }}">{{ a.extra|fmt }}</span></label>
+  <input type="range" class="form-range extra-range" id="extraRange{{ loop.index0 }}" min="0" max="{{ net }}" step="1" value="{{ a.extra }}">
+  <p>Months to payoff: <span id="months{{ loop.index0 }}">{{ a.months if a.months is not none else 'n/a' }}</span></p>
+  <form method="post" action="{{ url_for('commit_extra') }}" class="mb-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="account" id="accountField{{ loop.index0 }}">
+    <input type="hidden" name="extra" id="extraField{{ loop.index0 }}">
+    <button class="btn btn-primary">Commit Extra Payment</button>
+  </form>
 </div>
-<div class="mb-3">
-  <label for="extraRange" class="form-label">Extra Payment: $<span id="extraVal">0</span></label>
-  <input type="range" class="form-range" id="extraRange" min="0" max="{{ net }}" step="1" value="0">
-</div>
-<p>Left over each month: $<span id="leftover">{{ net|fmt }}</span></p>
-<p>Months to payoff: <span id="months">{{ accounts[0].months if accounts else 'n/a' }}</span></p>
-<form method="post" action="{{ url_for('commit_extra') }}" class="mb-3">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input type="hidden" name="account" id="accountField">
-  <input type="hidden" name="extra" id="extraField">
-  <button class="btn btn-primary">Commit Extra Payment</button>
-</form>
+{% else %}
+<p>No accounts</p>
+{% endfor %}
 <script>
 const net = {{ net }};
 const accounts = {{ accounts | tojson }};
@@ -45,24 +41,27 @@ function monthsToPayoff(balance, payment, apr, esc, ins, tax){
   return months;
 }
 function update(){
-  const idx = document.getElementById('acctSelect').value;
-  const extra = parseFloat(document.getElementById('extraRange').value);
-  document.getElementById('extraVal').textContent = extra.toLocaleString(undefined,{minimumFractionDigits:2});
-  const left = net - extra;
-  document.getElementById('leftover').textContent = left.toLocaleString(undefined,{minimumFractionDigits:2});
-  const acc = accounts[idx];
-  document.getElementById('extraField').value = extra;
-  document.getElementById('accountField').value = acc ? acc.name : '';
-  if(!acc){
-    document.getElementById('months').textContent = 'n/a';
-    return;
-  }
-  const m = monthsToPayoff(acc.balance, acc.payment + extra, acc.apr, acc.escrow, acc.insurance, acc.tax);
-  document.getElementById('months').textContent = m === null ? 'n/a' : m;
+  const sliders = document.querySelectorAll('.extra-range');
+  let totalExtra = 0;
+  sliders.forEach(sl => { totalExtra += parseFloat(sl.value); });
+  sliders.forEach((sl,i) => {
+    const extra = parseFloat(sl.value);
+    const acc = accounts[i];
+    const others = totalExtra - extra;
+    sl.max = Math.max(0, net - others);
+    document.getElementById('extraVal'+i).textContent =
+      extra.toLocaleString(undefined,{minimumFractionDigits:2});
+    document.getElementById('extraField'+i).value = extra;
+    document.getElementById('accountField'+i).value = acc.name;
+    const m = monthsToPayoff(acc.balance, acc.payment + extra, acc.apr,
+                             acc.escrow, acc.insurance, acc.tax);
+    document.getElementById('months'+i).textContent = m === null ? 'n/a' : m;
+  });
+  const left = net - totalExtra;
+  document.getElementById('leftover').textContent =
+    left.toLocaleString(undefined,{minimumFractionDigits:2});
 }
-['acctSelect','extraRange'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', update);
-});
+document.querySelectorAll('.extra-range').forEach(el=>{ el.addEventListener('input', update); });
 document.addEventListener('DOMContentLoaded', update);
 </script>
 {% endblock %}
