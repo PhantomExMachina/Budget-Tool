@@ -16,6 +16,11 @@ A simple command-line budgeting tool for tracking income and expenses. Data is s
 - Login via Firebase ID token
   - Authentication is disabled by default; set `AUTH_ENABLED=1` to enable
 
+## Subscription Tiers
+
+* **Free** - Access to all existing CLI and web features.
+* **Premium ($4.99/mo)** - Connect bank accounts via Plaid and generate transactions once per day.
+
 ## Usage
 Run the CLI with Python 3:
 
@@ -41,6 +46,8 @@ python3 budget_tool.py list-accounts                   # show account balances
 python3 budget_tool.py forecast [--months N]           # forecast account balances
 python3 budget_tool.py bank-balance <months>           # forecast bank balance
 python3 budget_tool.py history [CATEGORY] [--user NAME] [--limit N]
+python3 budget_tool.py set-subscription <tier> [--user NAME]  # update tier
+python3 budget_tool.py generate-transactions [--user NAME]   # Plaid import
 python3 budget_tool.py --db mydata.db totals          # use a custom database
 ```
 
