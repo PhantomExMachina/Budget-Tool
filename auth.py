@@ -27,3 +27,9 @@ def init_firebase():
 def verify_id_token(id_token: str) -> dict:
     init_firebase()
     return auth.verify_id_token(id_token)
+
+
+def oauth_login(provider: str) -> dict | None:
+    """Placeholder for future OAuth login support."""
+    # TODO: implement OAuth flows for providers like Google or Facebook
+    raise NotImplementedError("OAuth login not yet implemented")

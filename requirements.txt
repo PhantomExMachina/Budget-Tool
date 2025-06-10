@@ -5,3 +5,6 @@ firebase-admin
 
 Flask
 Flask-WTF
+SQLAlchemy
+alembic
+psycopg2-binary

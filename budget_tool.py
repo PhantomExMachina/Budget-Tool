@@ -5,6 +5,7 @@ import argparse
 import csv
 import os
 import sqlite3
+from urllib.parse import urlparse
 from pathlib import Path
 from datetime import datetime, timedelta
 import math
@@ -27,6 +28,7 @@ AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "0") == "1"
 DEFAULT_DB = Path(__file__).with_name("budget.db")
 DB_FILE = Path(os.environ.get("BUDGET_DB", DEFAULT_DB))
 SQLITE_KEY = os.environ.get("SQLITE_KEY")
+DATABASE_URL = os.environ.get("DATABASE_URL")
 if SQLITE_KEY:
     try:
         import pysqlcipher3.dbapi2 as sqlcipher  # type: ignore
@@ -180,15 +182,51 @@ def find_recurring_expenses(
     return recurring
 
 
+class _PGWrapper:
+    """Simple wrapper to provide sqlite-like API for psycopg2 connections."""
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, sql, params=()):
+        cur = self._conn.cursor()
+        cur.execute(sql, params)
+        return cur
+
+    def commit(self):
+        self._conn.commit()
+
+    def cursor(self):
+        return self._conn.cursor()
+
+    def close(self):
+        self._conn.close()
+
+
 def get_connection():
-    """Return a SQLite connection using the configured database file."""
-    if SQLITE_KEY:
-        if sqlcipher is None:
-            raise RuntimeError("pysqlcipher3 is required for encrypted databases")
-        conn = sqlcipher.connect(DB_FILE)
-        conn.execute(f"PRAGMA key='{SQLITE_KEY}'")
+    """Return a database connection using either SQLite or DATABASE_URL."""
+    if DATABASE_URL:
+        parsed = urlparse(DATABASE_URL)
+        if parsed.scheme.startswith("postgres"):
+            try:
+                import psycopg2
+            except Exception as exc:  # pragma: no cover - optional dependency
+                raise RuntimeError("psycopg2 is required for PostgreSQL support") from exc
+            conn = psycopg2.connect(DATABASE_URL)
+            return _PGWrapper(conn)
+        elif parsed.scheme.startswith("sqlite"):
+            path = parsed.path or "budget.db"
+            conn = sqlite3.connect(path)
+        else:
+            raise RuntimeError("Unsupported DATABASE_URL scheme")
     else:
-        conn = sqlite3.connect(DB_FILE)
+        if SQLITE_KEY:
+            if sqlcipher is None:
+                raise RuntimeError("pysqlcipher3 is required for encrypted databases")
+            conn = sqlcipher.connect(DB_FILE)
+            conn.execute(f"PRAGMA key='{SQLITE_KEY}'")
+        else:
+            conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
