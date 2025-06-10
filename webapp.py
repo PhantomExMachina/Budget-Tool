@@ -346,11 +346,20 @@ def budget_page():
     extra_tx_total = budget_tool.get_extra_transaction_total()
     base_net = net + extra_tx_total
     leftover = base_net - extras_total
+    warn1 = base_net * 0.2
+    warn2 = base_net * 0.1
+    if leftover <= warn2:
+        leftover_class = "text-danger"
+    elif leftover <= warn1:
+        leftover_class = "text-warning"
+    else:
+        leftover_class = ""
     return render_template(
         "budget.html",
         accounts=accounts,
         net=base_net,
         leftover=leftover,
+        leftover_class=leftover_class,
     )
 
 

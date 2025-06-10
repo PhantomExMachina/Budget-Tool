@@ -446,8 +446,24 @@ def test_budget_leftover_after_commit(tmp_path, monkeypatch):
     )
     resp = client.get("/budget")
     import re
-    match = re.search(r'id="leftover">([0-9.,]+)</span>', resp.get_data(as_text=True))
+    match = re.search(r'id="leftover"[^>]*>([0-9.,]+)</span>', resp.get_data(as_text=True))
     assert match
     leftover_val = float(match.group(1).replace(",", ""))
     assert leftover_val == 500.0
+
+
+def test_budget_leftover_classes(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    budget_tool.add_category("Job")
+    budget_tool.add_transaction("Job", 1000, "income", "Paycheck")
+    budget_tool.set_account("Loan", 1000, 50, "Loan")
+    # set extra to trigger warning
+    budget_tool.add_monthly_expense("Extra Payment - Loan", 850, "Extra Payment")
+    login(client, monkeypatch)
+    resp = client.get("/budget")
+    assert b'class="text-warning"' in resp.data
+    # set extra to trigger danger
+    budget_tool.add_monthly_expense("Extra Payment - Loan", 950, "Extra Payment")
+    resp = client.get("/budget")
+    assert b'class="text-danger"' in resp.data
 

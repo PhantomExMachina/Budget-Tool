@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h1>Budget</h1>
-<p>Left over each month: $<span id="leftover">{{ leftover|fmt }}</span></p>
+<p>Left over each month: $<span id="leftover" class="{{ leftover_class }}">{{ leftover|fmt }}</span></p>
 {% for a in accounts %}
 <div class="card mb-3 p-3">
   <h5 class="card-title">{{ a.name }}</h5>
@@ -22,6 +22,8 @@
 <script>
 const net = {{ net }};
 const accounts = {{ accounts | tojson }};
+const warn1 = net * 0.2;
+const warn2 = net * 0.1;
 function monthsToPayoff(balance, payment, apr, esc, ins, tax){
   const principal = payment - esc - ins - tax;
   if(principal <= 0) return null;
@@ -58,8 +60,15 @@ function update(){
     document.getElementById('months'+i).textContent = m === null ? 'n/a' : m;
   });
   const left = net - totalExtra;
-  document.getElementById('leftover').textContent =
+  const leftElem = document.getElementById('leftover');
+  leftElem.textContent =
     left.toLocaleString(undefined,{minimumFractionDigits:2});
+  leftElem.classList.remove('text-warning', 'text-danger');
+  if(left <= warn2){
+    leftElem.classList.add('text-danger');
+  }else if(left <= warn1){
+    leftElem.classList.add('text-warning');
+  }
 }
 document.querySelectorAll('.extra-range').forEach(el=>{ el.addEventListener('input', update); });
 document.addEventListener('DOMContentLoaded', update);
