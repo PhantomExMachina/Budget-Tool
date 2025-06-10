@@ -354,12 +354,14 @@ def budget_page():
         leftover_class = "text-warning"
     else:
         leftover_class = ""
+    leftover_warning = leftover <= warn1
     return render_template(
         "budget.html",
         accounts=accounts,
         net=base_net,
         leftover=leftover,
         leftover_class=leftover_class,
+        leftover_warning=leftover_warning,
     )
 
 

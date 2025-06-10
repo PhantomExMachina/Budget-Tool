@@ -1,7 +1,13 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h1>Budget</h1>
-<p>Left over each month: $<span id="leftover" class="{{ leftover_class }}">{{ leftover|fmt }}</span></p>
+<p>Left over each month: $<span id="leftover" class="{{ leftover_class }}">{{ leftover|fmt }}</span>
+  <span id="leftover-icon" class="{{ leftover_class }} ms-1" data-bs-toggle="tooltip"
+        title="Caution: less than 20% left over"
+        style="{% if leftover_warning %}display:inline{% else %}display:none{% endif %}">
+    <i class="bi-exclamation-circle-fill"></i>
+  </span>
+</p>
 {% for a in accounts %}
 <div class="card mb-3 p-3">
   <h5 class="card-title">{{ a.name }}</h5>
@@ -61,16 +67,29 @@ function update(){
   });
   const left = net - totalExtra;
   const leftElem = document.getElementById('leftover');
+  const icon = document.getElementById('leftover-icon');
   leftElem.textContent =
     left.toLocaleString(undefined,{minimumFractionDigits:2});
   leftElem.classList.remove('text-warning', 'text-danger');
+  icon.classList.remove('text-warning', 'text-danger');
   if(left <= warn2){
     leftElem.classList.add('text-danger');
+    icon.classList.add('text-danger');
   }else if(left <= warn1){
     leftElem.classList.add('text-warning');
+    icon.classList.add('text-warning');
+  }
+  if(left <= warn1){
+    icon.style.display = 'inline';
+  }else{
+    icon.style.display = 'none';
   }
 }
 document.querySelectorAll('.extra-range').forEach(el=>{ el.addEventListener('input', update); });
-document.addEventListener('DOMContentLoaded', update);
+document.addEventListener('DOMContentLoaded', () => {
+  update();
+  const trigger = document.getElementById('leftover-icon');
+  if(trigger){ new bootstrap.Tooltip(trigger); }
+});
 </script>
 {% endblock %}

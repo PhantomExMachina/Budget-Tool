@@ -462,8 +462,12 @@ def test_budget_leftover_classes(tmp_path, monkeypatch):
     login(client, monkeypatch)
     resp = client.get("/budget")
     assert b'class="text-warning"' in resp.data
+    assert b'id="leftover-icon"' in resp.data
+    assert b'display:inline' in resp.data
     # set extra to trigger danger
     budget_tool.add_monthly_expense("Extra Payment - Loan", 950, "Extra Payment")
     resp = client.get("/budget")
     assert b'class="text-danger"' in resp.data
+    assert b'id="leftover-icon"' in resp.data
+    assert b'display:inline' in resp.data
 
