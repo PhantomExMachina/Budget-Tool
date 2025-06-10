@@ -634,6 +634,20 @@ def delete_monthly_expense(desc: str) -> None:
     conn.close()
 
 
+def get_extra_transaction_total(user: str = "default") -> float:
+    """Return the sum of extra payment transactions for a user."""
+    conn = get_connection()
+    user_id = get_user_id(conn, user)
+    cur = conn.execute(
+        "SELECT SUM(amount) FROM transactions "
+        "WHERE user_id=? AND description LIKE 'Extra Payment - %'",
+        (user_id,),
+    )
+    val = cur.fetchone()[0] or 0.0
+    conn.close()
+    return val
+
+
 def add_monthly_income(
     desc: str, amount: float, category: str = "Misc", user: str = "default"
 ) -> None:

@@ -430,3 +430,24 @@ def test_update_extra_payment(tmp_path, monkeypatch):
         budget_tool.get_monthly_expense_amount("Extra Payment - Loan") is None
     )
 
+
+def test_budget_leftover_after_commit(tmp_path, monkeypatch):
+    client = setup_app(tmp_path)
+    budget_tool.add_category("Job")
+    budget_tool.add_category("Rent")
+    budget_tool.add_transaction("Job", 2000, "income", "Paycheck")
+    budget_tool.add_monthly_expense("Rent", 1000, "Rent")
+    budget_tool.set_account("Loan", 1000, 50, "Loan")
+    login(client, monkeypatch)
+    token = get_csrf(client, "/budget")
+    client.post(
+        "/commit-extra",
+        data={"account": "Loan", "extra": "500", "csrf_token": token},
+    )
+    resp = client.get("/budget")
+    import re
+    match = re.search(r'id="leftover">([0-9.,]+)</span>', resp.get_data(as_text=True))
+    assert match
+    leftover_val = float(match.group(1).replace(",", ""))
+    assert leftover_val == 500.0
+
