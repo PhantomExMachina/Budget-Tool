@@ -97,6 +97,10 @@ def get_accounts():
                 "balance": r["balance"],
                 "payment": r["monthly_payment"],
                 "type": r["type"],
+                "apr": r["apr"],
+                "escrow": r["escrow"],
+                "insurance": r["insurance"],
+                "tax": r["tax"],
                 "months": months,
                 "increase": increase,
             }
@@ -319,6 +323,19 @@ def forecast_route():
         debts=debts,
         months=months,
         label=label,
+    )
+
+
+@app.route("/budget")
+@require_login
+def budget_page():
+    """Interactive budgeting tool with payment slider."""
+    income, expense, net = get_totals()
+    accounts, _ = get_accounts()
+    return render_template(
+        "budget.html",
+        accounts=accounts,
+        net=net,
     )
 
 
