@@ -2,6 +2,8 @@
 
 A simple command-line budgeting tool for tracking income and expenses. Data is stored locally using SQLite so it can be easily ported to Android or iOS later. The CLI now supports multiple users, budget goals, CSV export and optional Firebase authentication.
 
+Note that this entire repository was made with and is being updated by OpenAIs Codex model. This is intended to be an experiment to test the capabilities of Codex and understand to what extent AI can be leveraged and where it falls short.
+
 ## Features
 - Create budget categories (e.g. Groceries, Rent, Fun)
 - Add income and expense entries associated with categories
